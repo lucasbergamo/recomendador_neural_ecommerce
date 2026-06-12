@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from src.data.features import load_gold
 from src.evaluation.metrics import evaluate_recommender
-from src.models.factory import ModelType, RecommenderFactory
+from src.models.factory import RecommenderFactory
 from src.models.ncf import NeuralCF
 from src.training.strategies import get_optimizer_strategy
 from src.utils.config import METRICS_DIR, MODELS_DIR, settings
@@ -55,19 +55,21 @@ def run() -> None:
     mlflow.set_experiment(settings.mlflow_experiment_name)
 
     with mlflow.start_run(run_name="ncf_pytorch"):
-        mlflow.log_params({
-            "model": "NeuralCF",
-            "embedding_dim": settings.embedding_dim,
-            "mlp_layers": str(settings.mlp_layers),
-            "dropout": settings.dropout,
-            "learning_rate": settings.learning_rate,
-            "batch_size": settings.batch_size,
-            "max_epochs": settings.max_epochs,
-            "patience": settings.patience,
-            "optimizer": "adam",
-            "n_users": n_users,
-            "n_items": n_items,
-        })
+        mlflow.log_params(
+            {
+                "model": "NeuralCF",
+                "embedding_dim": settings.embedding_dim,
+                "mlp_layers": str(settings.mlp_layers),
+                "dropout": settings.dropout,
+                "learning_rate": settings.learning_rate,
+                "batch_size": settings.batch_size,
+                "max_epochs": settings.max_epochs,
+                "patience": settings.patience,
+                "optimizer": "adam",
+                "n_users": n_users,
+                "n_items": n_items,
+            }
+        )
 
         best_val_loss = np.inf
         best_weights = copy.deepcopy(model.state_dict())

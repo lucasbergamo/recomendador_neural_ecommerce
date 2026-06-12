@@ -7,7 +7,7 @@ import pandas as pd
 
 from src.data.features import load_gold
 from src.evaluation.metrics import evaluate_baseline
-from src.models.baselines import PopularityRecommender, SVDRecommender, RandomRecommender
+from src.models.baselines import PopularityRecommender, RandomRecommender, SVDRecommender
 from src.utils.config import METRICS_DIR, settings
 from src.utils.logger import get_logger
 from src.utils.reproducibility import set_global_seed

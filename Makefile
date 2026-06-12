@@ -1,42 +1,42 @@
-.PHONY: install lint format test validate data train-baselines train eval docker-up docker-down clean
+.PHONY: install lint format test validate data train-baselines train eval docker-up docker-down docker-lint docker-test clean
 
 # ── Setup ──────────────────────────────────────────────────────────
 install:
 	poetry install
 
 validate:
-	python scripts/validate_env.py
+	poetry run python scripts/validate_env.py
 
 # ── Qualidade de código ────────────────────────────────────────────
 lint:
-	ruff check src/ tests/
-	ruff format --check src/ tests/
+	poetry run ruff check src/ tests/
+	poetry run ruff format --check src/ tests/
 
 format:
-	ruff check --fix src/ tests/
-	ruff format src/ tests/
+	poetry run ruff check --fix src/ tests/
+	poetry run ruff format src/ tests/
 
 # ── Testes ────────────────────────────────────────────────────────
 test:
-	pytest tests/ -v --tb=short
+	poetry run pytest tests/ -v --tb=short
 
 test-cov:
-	pytest tests/ -v --tb=short --cov=src --cov-report=term-missing
+	poetry run pytest tests/ -v --tb=short --cov=src --cov-report=term-missing
 
 # ── Pipeline de dados ─────────────────────────────────────────────
 data:
 	mkdir -p data/bronze data/silver data/gold models metrics
-	python -m src.data.pipeline
+	poetry run python -m src.data.pipeline
 
 # ── Treinamento ───────────────────────────────────────────────────
 train-baselines:
-	python -m src.training.train_baselines
+	poetry run python -m src.training.train_baselines
 
 train:
-	python -m src.training.trainer
+	poetry run python -m src.training.trainer
 
 eval:
-	python -m src.evaluation.metrics
+	poetry run python -m src.evaluation.metrics
 
 # Pipeline completo via DVC
 pipeline:
@@ -44,11 +44,18 @@ pipeline:
 
 # ── MLflow ────────────────────────────────────────────────────────
 mlflow:
-	mlflow ui --port 5000
+	poetry run mlflow ui --port 5000
 
 # ── Docker ────────────────────────────────────────────────────────
 docker-build:
 	docker compose build
+
+docker-lint:
+	docker compose --profile ci run --rm ci ruff check src/ tests/
+	docker compose --profile ci run --rm ci ruff format --check src/ tests/
+
+docker-test:
+	docker compose --profile ci run --rm ci pytest tests/ -v --tb=short
 
 docker-up:
 	docker compose up -d mlflow

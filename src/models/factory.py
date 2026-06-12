@@ -2,8 +2,6 @@
 
 from enum import StrEnum
 
-import pandas as pd
-
 from src.models.base import BaseRecommender
 from src.models.baselines import PopularityRecommender, RandomRecommender, SVDRecommender
 from src.models.ncf import NeuralCF

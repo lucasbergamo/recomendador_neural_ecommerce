@@ -1,12 +1,10 @@
 """Testes unitários para os modelos de recomendação."""
 
 import torch
-import pytest
 
-from src.models.ncf import NeuralCF
-from src.models.baselines import PopularityRecommender, SVDRecommender, RandomRecommender
+from src.models.baselines import PopularityRecommender, RandomRecommender, SVDRecommender
 from src.models.factory import ModelType, RecommenderFactory
-
+from src.models.ncf import NeuralCF
 
 N_USERS, N_ITEMS = 50, 100
 

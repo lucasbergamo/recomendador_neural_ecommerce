@@ -1,26 +1,28 @@
 """Testes para o pipeline de dados."""
 
 import pandas as pd
-import pytest
 
+from src.data.features import create_interaction_matrix
 from src.data.preprocess import (
     _filter_cold_start,
     _reindex_ids,
     preprocess_ratings,
     preprocess_users,
 )
-from src.data.features import create_interaction_matrix
 
 
 def _make_ratings(n: int = 50) -> pd.DataFrame:
     import numpy as np
+
     rng = np.random.default_rng(42)
-    return pd.DataFrame({
-        "user_id": rng.integers(0, 10, n),
-        "item_id": rng.integers(0, 20, n),
-        "rating": rng.integers(1, 6, n).astype(float),
-        "timestamp": rng.integers(800000000, 900000000, n),
-    })
+    return pd.DataFrame(
+        {
+            "user_id": rng.integers(0, 10, n),
+            "item_id": rng.integers(0, 20, n),
+            "rating": rng.integers(1, 6, n).astype(float),
+            "timestamp": rng.integers(800000000, 900000000, n),
+        }
+    )
 
 
 def test_filter_cold_start_removes_sparse():
@@ -52,12 +54,14 @@ def test_create_interaction_matrix_binary():
 
 
 def test_preprocess_users_gender_encoding():
-    users = pd.DataFrame({
-        "user_id": [1, 2, 3],
-        "age": [25, 30, 45],
-        "gender": ["M", "F", "M"],
-        "occupation": ["student", "engineer", "doctor"],
-        "zip_code": ["00000", "11111", "22222"],
-    })
+    users = pd.DataFrame(
+        {
+            "user_id": [1, 2, 3],
+            "age": [25, 30, 45],
+            "gender": ["M", "F", "M"],
+            "occupation": ["student", "engineer", "doctor"],
+            "zip_code": ["00000", "11111", "22222"],
+        }
+    )
     result = preprocess_users(users)
     assert set(result["gender"].unique()).issubset({0, 1})

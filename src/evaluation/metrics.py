@@ -21,9 +21,7 @@ class Recommender(Protocol):
 
 def ndcg_at_k(relevant: set[int], recommended: list[int], k: int) -> float:
     dcg = sum(
-        1.0 / np.log2(rank + 2)
-        for rank, item in enumerate(recommended[:k])
-        if item in relevant
+        1.0 / np.log2(rank + 2) for rank, item in enumerate(recommended[:k]) if item in relevant
     )
     ideal_dcg = sum(1.0 / np.log2(rank + 2) for rank in range(min(len(relevant), k)))
     return dcg / ideal_dcg if ideal_dcg > 0 else 0.0
@@ -68,7 +66,6 @@ def evaluate_recommender(
     device: torch.device,
 ) -> dict[str, float]:
     """Avalia o modelo NCF no test set usando leave-one-out por usuário."""
-    import torch
 
     from src.models.base import BaseRecommender
 
@@ -81,13 +78,15 @@ def evaluate_recommender(
     for user_id, group in test_positives.groupby("user_id"):
         relevant = set(group["item_id"].tolist())
         recommended = model.recommend_top_k(int(user_id), k * 2, device)[:k]
-        user_metrics.append({
-            f"ndcg@{k}": ndcg_at_k(relevant, recommended, k),
-            f"precision@{k}": precision_at_k(relevant, recommended, k),
-            f"recall@{k}": recall_at_k(relevant, recommended, k),
-            f"hit_rate@{k}": hit_rate_at_k(relevant, recommended, k),
-            f"map@{k}": average_precision_at_k(relevant, recommended, k),
-        })
+        user_metrics.append(
+            {
+                f"ndcg@{k}": ndcg_at_k(relevant, recommended, k),
+                f"precision@{k}": precision_at_k(relevant, recommended, k),
+                f"recall@{k}": recall_at_k(relevant, recommended, k),
+                f"hit_rate@{k}": hit_rate_at_k(relevant, recommended, k),
+                f"map@{k}": average_precision_at_k(relevant, recommended, k),
+            }
+        )
 
     metrics = _compute_mean_metrics(user_metrics)
     logger.info("ncf_evaluated", **metrics)
@@ -107,13 +106,15 @@ def evaluate_baseline(
     for user_id, group in test_positives.groupby("user_id"):
         relevant = set(group["item_id"].tolist())
         recommended = model.predict(int(user_id), k=k)
-        user_metrics.append({
-            f"ndcg@{k}": ndcg_at_k(relevant, recommended, k),
-            f"precision@{k}": precision_at_k(relevant, recommended, k),
-            f"recall@{k}": recall_at_k(relevant, recommended, k),
-            f"hit_rate@{k}": hit_rate_at_k(relevant, recommended, k),
-            f"map@{k}": average_precision_at_k(relevant, recommended, k),
-        })
+        user_metrics.append(
+            {
+                f"ndcg@{k}": ndcg_at_k(relevant, recommended, k),
+                f"precision@{k}": precision_at_k(relevant, recommended, k),
+                f"recall@{k}": recall_at_k(relevant, recommended, k),
+                f"hit_rate@{k}": hit_rate_at_k(relevant, recommended, k),
+                f"map@{k}": average_precision_at_k(relevant, recommended, k),
+            }
+        )
 
     return _compute_mean_metrics(user_metrics)
 

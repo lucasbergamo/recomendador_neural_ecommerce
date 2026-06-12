@@ -18,8 +18,12 @@ def preprocess_ratings(ratings: pd.DataFrame) -> pd.DataFrame:
     df["timestamp"] = pd.to_datetime(df["timestamp"], unit="s")
     df = _filter_cold_start(df)
     df = _reindex_ids(df)
-    logger.info("ratings_preprocessed", rows=len(df), users=df["user_id"].nunique(),
-                items=df["item_id"].nunique())
+    logger.info(
+        "ratings_preprocessed",
+        rows=len(df),
+        users=df["user_id"].nunique(),
+        items=df["item_id"].nunique(),
+    )
     return df
 
 
