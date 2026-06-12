@@ -55,5 +55,16 @@ services:
     profiles:
       - training
 
+  ci:
+    build:
+      context: .
+      target: ci
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./metrics:/app/metrics
+    profiles:
+      - ci
+
 volumes:
   mlflow_data:

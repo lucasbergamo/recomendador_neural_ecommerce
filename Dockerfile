@@ -33,3 +33,23 @@ ENV PYTHONUNBUFFERED=1
 RUN python scripts/validate_env.py || true
 
 CMD ["python", "-m", "src.training.trainer"]
+
+# Stage 3 — ci: runtime + ferramentas de dev (ruff, pytest) para rodar lint/testes em container
+FROM python:3.11-slim AS ci
+
+WORKDIR /app
+
+COPY --from=builder /usr/local/lib/python3.11 /usr/local/lib/python3.11
+COPY --from=builder /usr/local/bin /usr/local/bin
+
+RUN pip install --no-cache-dir "ruff>=0.7" "pytest>=8.3" "pytest-cov>=5.0"
+
+RUN mkdir -p data/bronze data/silver data/gold models metrics
+
+COPY src/ ./src/
+COPY tests/ ./tests/
+COPY configs/ ./configs/
+
+ENV PYTHONPATH=/app
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
