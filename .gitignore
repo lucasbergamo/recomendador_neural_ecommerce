@@ -1,0 +1,72 @@
+# PDFs e documentos
+*.pdf
+*.docx
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Ambientes virtuais
+.venv/
+venv/
+env/
+ENV/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Dados (gerenciados pelo DVC — conteúdo; .gitkeep commitado para criar dirs)
+data/silver/*
+data/gold/*
+!data/silver/.gitkeep
+!data/gold/.gitkeep
+
+# Dados brutos commitados intencionalmente para reprodutibilidade
+!data/bronze/.gitkeep
+
+# MLflow
+mlruns/
+mlartifacts/
+mlflow.db
+
+# Modelos treinados
+models/*.pt
+models/*.pth
+models/*.pkl
+!models/.gitkeep
+
+# Métricas (geradas pelo DVC)
+metrics/*.json
+!metrics/.gitkeep
+
+# DVC cache
+.dvc/cache/
+.dvc/tmp/
+
+# IDEs
+.vscode/
+.idea/
+*.code-workspace
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Variáveis de ambiente
+.env
+.env.local
+.env.*.local
+secrets.yaml
+# .env.example deve ser commitado — é o template público
+
+# Pre-commit
+.pre-commit-cache/

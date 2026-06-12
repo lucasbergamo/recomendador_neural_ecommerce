@@ -1,0 +1,59 @@
+services:
+  mlflow:
+    image: python:3.11-slim
+    working_dir: /mlflow
+    command: >
+      sh -c "pip install mlflow --quiet &&
+             mlflow server
+             --host 0.0.0.0
+             --port 5000
+             --backend-store-uri sqlite:///mlflow.db
+             --default-artifact-root /mlflow/artifacts"
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow_data:/mlflow
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  trainer:
+    build:
+      context: .
+      target: runtime
+    depends_on:
+      mlflow:
+        condition: service_healthy
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - MLFLOW_EXPERIMENT_NAME=recommendation-system
+      - SEED=42
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./metrics:/app/metrics
+    command: ["python", "-m", "src.data.pipeline"]
+
+  train-model:
+    build:
+      context: .
+      target: runtime
+    depends_on:
+      mlflow:
+        condition: service_healthy
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - MLFLOW_EXPERIMENT_NAME=recommendation-system
+      - SEED=42
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./metrics:/app/metrics
+    command: ["python", "-m", "src.training.trainer"]
+    profiles:
+      - training
+
+volumes:
+  mlflow_data:

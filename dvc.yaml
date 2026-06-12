@@ -1,0 +1,53 @@
+stages:
+  preprocess:
+    cmd: python -m src.data.preprocess
+    deps:
+      - src/data/load.py
+      - src/data/preprocess.py
+      - data/bronze/ratings.csv
+      - data/bronze/items.csv
+      - data/bronze/users.csv
+    outs:
+      - data/silver/ratings.parquet
+      - data/silver/items.parquet
+      - data/silver/users.parquet
+
+  feature_eng:
+    cmd: python -m src.data.features
+    deps:
+      - src/data/features.py
+      - data/silver/ratings.parquet
+      - data/silver/users.parquet
+    outs:
+      - data/gold/train.parquet
+      - data/gold/val.parquet
+      - data/gold/test.parquet
+      - data/gold/metadata.parquet
+
+  train:
+    cmd: python -m src.training.trainer
+    deps:
+      - src/training/trainer.py
+      - src/training/strategies.py
+      - src/models/ncf.py
+      - src/models/base.py
+      - src/models/factory.py
+      - data/gold/train.parquet
+      - data/gold/val.parquet
+      - data/gold/metadata.parquet
+    outs:
+      - models/ncf.pt
+    metrics:
+      - metrics/train_metrics.json:
+          cache: false
+
+  evaluate:
+    cmd: python -m src.evaluation.metrics
+    deps:
+      - src/evaluation/metrics.py
+      - models/ncf.pt
+      - data/gold/test.parquet
+      - data/gold/metadata.parquet
+    metrics:
+      - metrics/eval_metrics.json:
+          cache: false
