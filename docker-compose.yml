@@ -1,28 +1,43 @@
+name: recomendador
+
 services:
   mlflow:
-    image: python:3.11-slim
+    container_name: recomendador-mlflow
+    image: ghcr.io/mlflow/mlflow:v3.13.0
     working_dir: /mlflow
     command: >
-      sh -c "pip install mlflow --quiet &&
-             mlflow server
-             --host 0.0.0.0
-             --port 5000
-             --backend-store-uri sqlite:///mlflow.db
-             --default-artifact-root /mlflow/artifacts"
+      mlflow server
+      --host 0.0.0.0
+      --port 5000
+      --backend-store-uri sqlite:///mlflow.db
+      --artifacts-destination /mlflow/artifacts
+      --serve-artifacts
+      --allowed-hosts "*"
     ports:
       - "5000:5000"
     volumes:
       - mlflow_data:/mlflow
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
 
-  trainer:
+  data-pipeline:
+    container_name: recomendador-data-pipeline
     build:
       context: .
       target: runtime
+    volumes:
+      - ./data:/app/data
+    command: ["python", "-m", "src.data.pipeline"]
+
+  train-baselines:
+    container_name: recomendador-train-baselines
+    build:
+      context: .
+      target: runtime
+    user: "${CURRENT_UID}:${CURRENT_GID}"
     depends_on:
       mlflow:
         condition: service_healthy
@@ -30,16 +45,22 @@ services:
       - MLFLOW_TRACKING_URI=http://mlflow:5000
       - MLFLOW_EXPERIMENT_NAME=recommendation-system
       - SEED=42
+      - GIT_PYTHON_REFRESH=quiet
+      - LOGNAME=appuser
     volumes:
       - ./data:/app/data
       - ./models:/app/models
       - ./metrics:/app/metrics
-    command: ["python", "-m", "src.data.pipeline"]
+    command: ["python", "-m", "src.training.train_baselines"]
+    profiles:
+      - training
 
   train-model:
+    container_name: recomendador-train-model
     build:
       context: .
       target: runtime
+    user: "${CURRENT_UID}:${CURRENT_GID}"
     depends_on:
       mlflow:
         condition: service_healthy
@@ -47,6 +68,8 @@ services:
       - MLFLOW_TRACKING_URI=http://mlflow:5000
       - MLFLOW_EXPERIMENT_NAME=recommendation-system
       - SEED=42
+      - GIT_PYTHON_REFRESH=quiet
+      - LOGNAME=appuser
     volumes:
       - ./data:/app/data
       - ./models:/app/models
@@ -56,6 +79,7 @@ services:
       - training
 
   ci:
+    container_name: recomendador-ci
     build:
       context: .
       target: ci
