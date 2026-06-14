@@ -7,7 +7,7 @@ RUN pip install --no-cache-dir poetry==2.4.1
 
 COPY pyproject.toml poetry.lock* ./
 RUN poetry config virtualenvs.create false \
-    && poetry install --only main --no-interaction --no-ansi
+    && poetry install --only main --no-root --no-interaction --no-ansi
 
 # Stage 2 — runtime: imagem final enxuta sem ferramentas de build
 FROM python:3.11-slim AS runtime
@@ -46,6 +46,7 @@ RUN pip install --no-cache-dir "ruff>=0.7" "pytest>=8.3" "pytest-cov>=5.0"
 
 RUN mkdir -p data/bronze data/silver data/gold models metrics
 
+COPY pyproject.toml ./
 COPY src/ ./src/
 COPY tests/ ./tests/
 COPY configs/ ./configs/

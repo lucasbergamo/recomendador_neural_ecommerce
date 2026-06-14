@@ -16,7 +16,6 @@ data/silver/
 data/gold/
 models/*.pt
 models/*.pth
-tests/
 notebooks/
 docs/
 *.pdf
