@@ -1,5 +1,8 @@
 .PHONY: install lint format test validate data train-baselines train eval docker-up docker-down docker-lint docker-test clean
 
+export CURRENT_UID := $(shell id -u)
+export CURRENT_GID := $(shell id -g)
+
 # ── Setup ──────────────────────────────────────────────────────────
 install:
 	poetry install
@@ -61,12 +64,18 @@ docker-up:
 	docker compose up -d mlflow
 
 docker-data:
-	docker compose run --rm trainer
+	docker compose run --rm data-pipeline
+
+docker-train-baselines:
+	docker compose --profile training run --rm train-baselines
 
 docker-train:
-	docker compose run --rm --profile training train-model
+	docker compose --profile training run --rm train-model
 
 docker-down:
+	docker compose down
+
+docker-down-clean:
 	docker compose down -v
 
 # ── Limpeza ───────────────────────────────────────────────────────

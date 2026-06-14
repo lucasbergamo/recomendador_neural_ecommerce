@@ -80,11 +80,11 @@ def evaluate_recommender(
         recommended = model.recommend_top_k(int(user_id), k * 2, device)[:k]
         user_metrics.append(
             {
-                f"ndcg@{k}": ndcg_at_k(relevant, recommended, k),
-                f"precision@{k}": precision_at_k(relevant, recommended, k),
-                f"recall@{k}": recall_at_k(relevant, recommended, k),
-                f"hit_rate@{k}": hit_rate_at_k(relevant, recommended, k),
-                f"map@{k}": average_precision_at_k(relevant, recommended, k),
+                f"ndcg_at_{k}": ndcg_at_k(relevant, recommended, k),
+                f"precision_at_{k}": precision_at_k(relevant, recommended, k),
+                f"recall_at_{k}": recall_at_k(relevant, recommended, k),
+                f"hit_rate_at_{k}": hit_rate_at_k(relevant, recommended, k),
+                f"map_at_{k}": average_precision_at_k(relevant, recommended, k),
             }
         )
 
@@ -108,11 +108,11 @@ def evaluate_baseline(
         recommended = model.predict(int(user_id), k=k)
         user_metrics.append(
             {
-                f"ndcg@{k}": ndcg_at_k(relevant, recommended, k),
-                f"precision@{k}": precision_at_k(relevant, recommended, k),
-                f"recall@{k}": recall_at_k(relevant, recommended, k),
-                f"hit_rate@{k}": hit_rate_at_k(relevant, recommended, k),
-                f"map@{k}": average_precision_at_k(relevant, recommended, k),
+                f"ndcg_at_{k}": ndcg_at_k(relevant, recommended, k),
+                f"precision_at_{k}": precision_at_k(relevant, recommended, k),
+                f"recall_at_{k}": recall_at_k(relevant, recommended, k),
+                f"hit_rate_at_{k}": hit_rate_at_k(relevant, recommended, k),
+                f"map_at_{k}": average_precision_at_k(relevant, recommended, k),
             }
         )
 
