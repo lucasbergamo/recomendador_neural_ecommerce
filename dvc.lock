@@ -1,0 +1,166 @@
+schema: '2.0'
+stages:
+  preprocess:
+    cmd: python -m src.data.preprocess
+    deps:
+    - path: data/bronze/items.csv
+      hash: md5
+      md5: 4c4365e842a6efd48225e4a31c000e4e
+      size: 89708
+    - path: data/bronze/ratings.csv
+      hash: md5
+      md5: ad3c6cf0bc7d2e9d40d33a64366258f0
+      size: 1979206
+    - path: data/bronze/users.csv
+      hash: md5
+      md5: 7a2b704cd2dca88a29d97790a923ff81
+      size: 22667
+    - path: src/data/load.py
+      hash: md5
+      md5: 1d3fb7ce42e547c3a9bac4e47038e805
+      size: 3302
+    - path: src/data/preprocess.py
+      hash: md5
+      md5: a0d371b77c3f8f4e843c63ea7c33e61c
+      size: 2997
+    outs:
+    - path: data/silver/items.parquet
+      hash: md5
+      md5: 3f4623b303253c537c9347bb4beaa3d6
+      size: 50300
+    - path: data/silver/ratings.parquet
+      hash: md5
+      md5: 36f22946f5a55a191bdb6c0ca812e892
+      size: 893729
+    - path: data/silver/users.parquet
+      hash: md5
+      md5: 15c39f18173058e5072b990395e1a0ad
+      size: 15920
+  feature_eng:
+    cmd: python -m src.data.features
+    deps:
+    - path: data/silver/ratings.parquet
+      hash: md5
+      md5: 36f22946f5a55a191bdb6c0ca812e892
+      size: 893729
+    - path: data/silver/users.parquet
+      hash: md5
+      md5: 15c39f18173058e5072b990395e1a0ad
+      size: 15920
+    - path: src/data/features.py
+      hash: md5
+      md5: a056e2e9cd3e9170ba639b3069aa7b93
+      size: 4072
+    outs:
+    - path: data/gold/metadata.parquet
+      hash: md5
+      md5: 99a4bda646dae6754bc691da067da488
+      size: 1762
+    - path: data/gold/test.parquet
+      hash: md5
+      md5: 670766e41aa59421d3fda49db53b9e2b
+      size: 87306
+    - path: data/gold/train.parquet
+      hash: md5
+      md5: 603e4ca3d047a4ac3ab87b070a2be732
+      size: 1061401
+    - path: data/gold/val.parquet
+      hash: md5
+      md5: 6c3809363d76e80884467e92b7bbf1f9
+      size: 88297
+  train_baselines:
+    cmd: python -m src.training.train_baselines
+    deps:
+    - path: data/gold/metadata.parquet
+      hash: md5
+      md5: 99a4bda646dae6754bc691da067da488
+      size: 1762
+    - path: data/gold/test.parquet
+      hash: md5
+      md5: 670766e41aa59421d3fda49db53b9e2b
+      size: 87306
+    - path: data/gold/train.parquet
+      hash: md5
+      md5: 603e4ca3d047a4ac3ab87b070a2be732
+      size: 1061401
+    - path: src/models/baselines.py
+      hash: md5
+      md5: ed723c348708876ee98b7b8ce5adbfbc
+      size: 2974
+    - path: src/training/train_baselines.py
+      hash: md5
+      md5: 4e18056998024584e826774d29283f95
+      size: 1812
+    outs:
+    - path: metrics/baseline_metrics.json
+      hash: md5
+      md5: b6ae6f17e57ef170acf435428e7d8334
+      size: 475
+  train:
+    cmd: python -m src.training.trainer
+    deps:
+    - path: data/gold/metadata.parquet
+      hash: md5
+      md5: 99a4bda646dae6754bc691da067da488
+      size: 1762
+    - path: data/gold/train.parquet
+      hash: md5
+      md5: 603e4ca3d047a4ac3ab87b070a2be732
+      size: 1061401
+    - path: data/gold/val.parquet
+      hash: md5
+      md5: 6c3809363d76e80884467e92b7bbf1f9
+      size: 88297
+    - path: src/models/base.py
+      hash: md5
+      md5: 9ef25f3132ce05d39a5a478fb1cde82d
+      size: 1758
+    - path: src/models/factory.py
+      hash: md5
+      md5: 8b06ce1fd2699a7968c40f65707cd9a7
+      size: 1834
+    - path: src/models/ncf.py
+      hash: md5
+      md5: 7e3ebcd5b8b4e706f9bce1ff9291ddfb
+      size: 2771
+    - path: src/training/strategies.py
+      hash: md5
+      md5: e3d1d22879cd71e0d35ee06f44b0f85a
+      size: 1682
+    - path: src/training/trainer.py
+      hash: md5
+      md5: e15b28eee57009adaff2e4bde2dfb8bf
+      size: 4687
+    outs:
+    - path: metrics/train_metrics.json
+      hash: md5
+      md5: 838b46e11aa130c89eac7d3e8dc8ca4a
+      size: 61
+    - path: models/ncf.pt
+      hash: md5
+      md5: 9463d3eb6241a3734ca87592a449d82f
+      size: 1285495
+  evaluate:
+    cmd: python -m src.evaluation.metrics
+    deps:
+    - path: data/gold/metadata.parquet
+      hash: md5
+      md5: 99a4bda646dae6754bc691da067da488
+      size: 1762
+    - path: data/gold/test.parquet
+      hash: md5
+      md5: 670766e41aa59421d3fda49db53b9e2b
+      size: 87306
+    - path: models/ncf.pt
+      hash: md5
+      md5: 9463d3eb6241a3734ca87592a449d82f
+      size: 1285495
+    - path: src/evaluation/metrics.py
+      hash: md5
+      md5: c0079e2faab864407a205c1f79c5071c
+      size: 4853
+    outs:
+    - path: metrics/eval_metrics.json
+      hash: md5
+      md5: a30062e4b5460f9ce9bc02955834766e
+      size: 132

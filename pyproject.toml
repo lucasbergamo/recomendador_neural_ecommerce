@@ -25,6 +25,7 @@ ipykernel = ">=6.29"
 matplotlib = ">=3.9"
 seaborn = ">=0.13"
 pre-commit = ">=3.8"
+dvc = "^3.67.1"
 
 [build-system]
 requires = ["poetry-core"]

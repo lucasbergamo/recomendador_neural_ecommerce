@@ -3,6 +3,7 @@
 import numpy as np
 import pandas as pd
 
+from src.data.preprocess import load_silver
 from src.utils.config import DATA_GOLD_DIR
 from src.utils.logger import get_logger
 from src.utils.reproducibility import set_global_seed
@@ -96,3 +97,19 @@ def load_gold() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, dict]:
     test = pd.read_parquet(DATA_GOLD_DIR / "test.parquet")
     meta = pd.read_parquet(DATA_GOLD_DIR / "metadata.parquet").iloc[0].to_dict()
     return train, val, test, meta
+
+
+def main() -> None:
+    set_global_seed()
+    ratings, _, _ = load_silver()
+    n_users = ratings["user_id"].nunique()
+    n_items = ratings["item_id"].nunique()
+
+    interactions = create_interaction_matrix(ratings)
+    interactions = add_negative_samples(interactions, n_items)
+    train, val, test = temporal_split(interactions)
+    save_gold(train, val, test, n_users, n_items)
+
+
+if __name__ == "__main__":
+    main()

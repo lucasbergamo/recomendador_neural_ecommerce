@@ -24,6 +24,18 @@ stages:
       - data/gold/test.parquet
       - data/gold/metadata.parquet
 
+  train_baselines:
+    cmd: python -m src.training.train_baselines
+    deps:
+      - src/training/train_baselines.py
+      - src/models/baselines.py
+      - data/gold/train.parquet
+      - data/gold/test.parquet
+      - data/gold/metadata.parquet
+    metrics:
+      - metrics/baseline_metrics.json:
+          cache: false
+
   train:
     cmd: python -m src.training.trainer
     deps:

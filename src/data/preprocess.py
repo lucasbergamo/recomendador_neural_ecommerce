@@ -2,6 +2,7 @@
 
 import pandas as pd
 
+from src.data.load import load_bronze
 from src.utils.config import DATA_SILVER_DIR
 from src.utils.logger import get_logger
 
@@ -72,3 +73,15 @@ def load_silver() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     items = pd.read_parquet(DATA_SILVER_DIR / "items.parquet")
     users = pd.read_parquet(DATA_SILVER_DIR / "users.parquet")
     return ratings, items, users
+
+
+def main() -> None:
+    ratings_raw, items_raw, users_raw = load_bronze()
+    ratings = preprocess_ratings(ratings_raw)
+    items = preprocess_items(items_raw)
+    users = preprocess_users(users_raw)
+    save_silver(ratings, items, users)
+
+
+if __name__ == "__main__":
+    main()

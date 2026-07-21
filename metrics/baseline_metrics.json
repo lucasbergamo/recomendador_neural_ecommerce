@@ -1,0 +1,23 @@
+{
+  "svd": {
+    "ndcg_at_10": 0.0079,
+    "precision_at_10": 0.0051,
+    "recall_at_10": 0.0132,
+    "hit_rate_at_10": 0.0509,
+    "map_at_10": 0.0031
+  },
+  "popularity": {
+    "ndcg_at_10": 0.035,
+    "precision_at_10": 0.0244,
+    "recall_at_10": 0.0396,
+    "hit_rate_at_10": 0.1983,
+    "map_at_10": 0.0153
+  },
+  "random": {
+    "ndcg_at_10": 0.0061,
+    "precision_at_10": 0.0052,
+    "recall_at_10": 0.0064,
+    "hit_rate_at_10": 0.0509,
+    "map_at_10": 0.002
+  }
+}
