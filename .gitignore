@@ -46,6 +46,9 @@ models/*.pkl
 # Métricas (geradas pelo DVC)
 metrics/*.json
 !metrics/.gitkeep
+!metrics/train_metrics.json
+!metrics/eval_metrics.json
+!metrics/baseline_metrics.json
 
 # DVC cache
 .dvc/cache/
