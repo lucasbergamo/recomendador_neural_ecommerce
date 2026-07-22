@@ -129,17 +129,21 @@ stages:
       size: 1682
     - path: src/training/trainer.py
       hash: md5
-      md5: e15b28eee57009adaff2e4bde2dfb8bf
-      size: 4687
+      md5: 908f3e3f66b620267c97d9bcb428438a
+      size: 5084
+    - path: src/utils/config.py
+      hash: md5
+      md5: 2d65a0a6a1adb7884d563ca335baba45
+      size: 864
     outs:
     - path: metrics/train_metrics.json
       hash: md5
-      md5: 838b46e11aa130c89eac7d3e8dc8ca4a
-      size: 61
+      md5: ac7bed129f66f29c363926cbe9caa310
+      size: 200
     - path: models/ncf.pt
       hash: md5
-      md5: 9463d3eb6241a3734ca87592a449d82f
-      size: 1285495
+      md5: 1d81f93a47f484c4a74ab53fdabbcc66
+      size: 665783
   evaluate:
     cmd: python -m src.evaluation.metrics
     deps:
@@ -153,8 +157,8 @@ stages:
       size: 87306
     - path: models/ncf.pt
       hash: md5
-      md5: 9463d3eb6241a3734ca87592a449d82f
-      size: 1285495
+      md5: 1d81f93a47f484c4a74ab53fdabbcc66
+      size: 665783
     - path: src/evaluation/metrics.py
       hash: md5
       md5: c0079e2faab864407a205c1f79c5071c
@@ -162,5 +166,5 @@ stages:
     outs:
     - path: metrics/eval_metrics.json
       hash: md5
-      md5: a30062e4b5460f9ce9bc02955834766e
+      md5: 8a82e212d14e29386ae000788961cec7
       size: 132

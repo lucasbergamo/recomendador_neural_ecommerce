@@ -1,1 +1,1 @@
-{"stopped_at_epoch": 12, "best_val_loss": 1.2972015142440796}
+{"stopped_at_epoch": 13, "best_val_loss": 1.3156185150146484, "val_ndcg_at_10": 0.0353, "val_precision_at_10": 0.0223, "val_recall_at_10": 0.0455, "val_hit_rate_at_10": 0.1866, "val_map_at_10": 0.016}

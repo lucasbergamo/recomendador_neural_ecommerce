@@ -1,7 +1,7 @@
 {
-  "ndcg_at_10": 0.0328,
-  "precision_at_10": 0.0223,
-  "recall_at_10": 0.0421,
-  "hit_rate_at_10": 0.1835,
-  "map_at_10": 0.0137
+  "ndcg_at_10": 0.0345,
+  "precision_at_10": 0.0231,
+  "recall_at_10": 0.0445,
+  "hit_rate_at_10": 0.1898,
+  "map_at_10": 0.0148
 }

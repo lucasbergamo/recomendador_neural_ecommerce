@@ -44,6 +44,7 @@ stages:
       - src/models/ncf.py
       - src/models/base.py
       - src/models/factory.py
+      - src/utils/config.py
       - data/gold/train.parquet
       - data/gold/val.parquet
       - data/gold/metadata.parquet
