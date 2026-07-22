@@ -26,13 +26,21 @@ make train-baselines   # SVD, Popularity, Random via MLflow
 make train             # NeuralCF (NCF) via MLflow
 make eval              # avalia modelo salvo em models/ncf.pt
 
-# Pipeline completo reprodutível
-dvc repro          # equivale a data → train → eval com cache DVC
+# Model Registry
+make register       # registra models/ncf.pt no MLflow Model Registry,
+                     # promove via aliases @staging → @production
+
+# Pipeline completo reprodutível (5 stages: preprocess, feature_eng,
+# train_baselines, train, evaluate)
+dvc repro
 
 # Docker
-make docker-up     # sobe MLflow server em localhost:5000
-make docker-data   # roda pipeline de dados em container
-make docker-train  # treina em container (requer --profile training)
+make docker-up               # sobe MLflow server em localhost:5000 (imagem oficial)
+make docker-data              # roda pipeline de dados em container (serviço data-pipeline)
+make docker-train-baselines   # baselines em container (requer --profile training)
+make docker-train             # NCF em container (requer --profile training)
+make docker-lint              # ruff em container (stage ci do Dockerfile)
+make docker-test              # pytest em container (stage ci do Dockerfile)
 ```
 
 ## Arquitetura
@@ -72,13 +80,15 @@ Todas as settings são lidas via **Pydantic Settings** (`src/utils/config.py`). 
 
 Os caminhos de diretório (`DATA_BRONZE_DIR`, `MODELS_DIR`, etc.) são constantes derivadas de `PROJECT_ROOT` e devem ser importadas de `src.utils.config`, não hardcodadas.
 
-### MLflow
+### MLflow + Model Registry
 
-Todos os runs (NCF + baselines) vão para o mesmo experimento `recommendation-system`. O MLflow precisa estar rodando (`make mlflow` ou `make docker-up`) antes de treinar. O tracking URI padrão é `http://localhost:5000`.
+Todos os runs (NCF + baselines) vão para o mesmo experimento `recommendation-system`. O MLflow precisa estar rodando (`make mlflow` ou `make docker-up`) antes de treinar. O tracking URI padrão é `http://localhost:5000`. Na UI (MLflow 3.x), os runs ficam em **Runs**/**Evaluation runs** — a aba **Traces** é observabilidade de LLM/GenAI, não se aplica aqui.
+
+O modelo final é registrado no Model Registry via `scripts/register_model.py` (`make register`) — nome `ncf-recommender`, promovido por **aliases** (`@staging`, `@production`), não pelos stages antigos (Staging/Production/Archived), descontinuados desde o MLflow 2.9. Script separado do `trainer.py` de propósito: registrar/promover é uma decisão sobre um modelo já escolhido, não deveria rodar a cada `make train`.
 
 ### DVC pipeline
 
-`dvc.yaml` define 4 stages com dependências explícitas entre arquivos. Ao modificar qualquer `dep`, `dvc repro` re-executa apenas os stages afetados. Os arquivos `data/silver/`, `data/gold/` e `models/ncf.pt` são gerenciados pelo DVC (não pelo git).
+`dvc.yaml` define 5 stages com dependências explícitas entre arquivos: `preprocess` → `feature_eng` → `{train_baselines, train}` → `evaluate` (`train_baselines` e `train` rodam em paralelo, ambos dependem só de `feature_eng`). Ao modificar qualquer `dep`, `dvc repro` re-executa apenas os stages afetados — inclui `src/utils/config.py` como dep do stage `train`, já que hiperparâmetros de lá (`embedding_dim`, `learning_rate` etc.) afetam o modelo final. Os arquivos `data/silver/`, `data/gold/` e `models/ncf.pt` são gerenciados pelo DVC (não pelo git). O remote é local (`~/dvc-storage`) — simula um bucket S3 para fins de reprodutibilidade, mas não está disponível pra quem clona o repo (`dvc pull` não funciona); `dvc repro` reconstrói tudo a partir dos CSVs de `data/bronze/`, já commitados.
 
 ## Convenções
 
