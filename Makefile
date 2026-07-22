@@ -1,4 +1,4 @@
-.PHONY: install lint format test validate data train-baselines train eval docker-up docker-down docker-lint docker-test clean
+.PHONY: install lint format test validate data train-baselines train eval register docker-up docker-down docker-lint docker-test clean
 
 export CURRENT_UID := $(shell id -u)
 export CURRENT_GID := $(shell id -g)
@@ -40,6 +40,10 @@ train:
 
 eval:
 	poetry run python -m src.evaluation.metrics
+
+# ── Model Registry ────────────────────────────────────────────────
+register:
+	poetry run python -m scripts.register_model
 
 # Pipeline completo via DVC
 pipeline:
