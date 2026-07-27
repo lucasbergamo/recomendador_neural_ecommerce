@@ -65,6 +65,7 @@ O NCF fica marginalmente abaixo do Popularity (dataset pequeno e denso favorece 
 | Dependências | Poetry — lock file commitado |
 | Containerização | Docker multi-stage + docker-compose |
 | Serving | FastAPI + Uvicorn |
+| Infra (bônus) | Terraform — API Gateway + ECS Fargate Spot na AWS |
 | Qualidade de código | Ruff + pre-commit hooks |
 | Configuração | Pydantic Settings + .env |
 | Testes | Pytest |
@@ -266,6 +267,40 @@ Os testes cobrem:
 
 ---
 
+## Deploy na AWS (bônus)
+
+A API de recomendação (seção anterior) está publicada com **URL pública real**, atendendo
+ao critério de bônus do enunciado ("container acessível via URL pública") — não é só uma
+prova pontual de que o container roda, é um serviço vivo.
+
+```
+Internet → API Gateway (REST API, HTTPS gerenciado)
+              │  exige header x-api-key
+              ▼
+         VPC Link → Network Load Balancer interno (sem IP público)
+                          │
+                          ▼
+                    ECS Fargate Spot (subnet privada, sem IP público)
+                          └─ container FastAPI + modelo NCF embutido
+```
+
+- **URL**: `https://5xhc4ww417.execute-api.us-east-1.amazonaws.com/prod`
+- **Autenticação**: header `x-api-key` obrigatório (403 sem ele) — a chave de demonstração
+  foi compartilhada com o avaliador por canal separado do repositório (vídeo STAR ou nota
+  à parte), nunca em texto no código — prática padrão de segurança: segredo não trafega no
+  mesmo canal que o código público.
+- **Infraestrutura como código**: todo o provisionamento está em [`infra/`](infra/)
+  (Terraform) — subnet privada, VPC Endpoints (sem NAT Gateway), NLB interno, ECS Fargate
+  Spot com self-healing nativo, API Gateway com Usage Plan (throttle de 5 req/s) e API Key.
+  Reproduzível com `terraform init && terraform apply` (requer credenciais AWS válidas).
+- **Disponibilidade**: roda em capacidade **Spot** — mais barata, mas a AWS pode reciclar a
+  instância a qualquer momento. O ECS repõe a task sozinho; se uma chamada falhar, tente de
+  novo em alguns minutos antes de assumir que está fora do ar.
+- **Desligar depois de usar**: `cd infra && terraform destroy` remove todos os recursos —
+  evita gastar o budget do lab à toa depois da correção.
+
+---
+
 ## Etapas de Desenvolvimento
 
 | Etapa | Descrição | Status |
@@ -274,6 +309,7 @@ Os testes cobrem:
 | 2 — Dependências | Poetry, Pydantic Settings, validate_env | ✅ Concluída |
 | 3 — Containerização | Docker multi-stage, DVC pipeline, MLflow | ✅ Concluída |
 | 4 — Modelo Neural | NCF treinado, tuning (3 configs), Model Registry, Model Card | ✅ Concluída |
+| Bônus — Deploy AWS | API FastAPI + Terraform (API Gateway, ECS Fargate Spot, VPC privada) | ✅ Concluída |
 
 ---
 

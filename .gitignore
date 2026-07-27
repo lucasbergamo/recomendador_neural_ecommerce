@@ -73,3 +73,13 @@ secrets.yaml
 
 # Pre-commit
 .pre-commit-cache/
+
+# Terraform — state contém dados sensíveis (ex: API key) e é específico da conta AWS
+# (.terraform.lock.hcl NÃO entra aqui de propósito — deve ser commitado, mesmo
+# princípio do poetry.lock/dvc.lock: fixa a versão exata do provider)
+infra/.terraform/
+infra/*.tfstate
+infra/*.tfstate.*
+infra/*.tfvars
+infra/crash.log
+infra/tfplan
