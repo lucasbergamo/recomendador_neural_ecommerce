@@ -78,6 +78,42 @@ services:
     profiles:
       - training
 
+  evaluate:
+    container_name: recomendador-evaluate
+    build:
+      context: .
+      target: runtime
+    user: "${CURRENT_UID}:${CURRENT_GID}"
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./metrics:/app/metrics
+    command: ["python", "-m", "src.evaluation.metrics"]
+    profiles:
+      - training
+
+  register:
+    container_name: recomendador-register
+    build:
+      context: .
+      target: runtime
+    user: "${CURRENT_UID}:${CURRENT_GID}"
+    depends_on:
+      mlflow:
+        condition: service_healthy
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - MLFLOW_EXPERIMENT_NAME=recommendation-system
+      - SEED=42
+      - GIT_PYTHON_REFRESH=quiet
+      - LOGNAME=appuser
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+    command: ["python", "-m", "scripts.register_model"]
+    profiles:
+      - training
+
   ci:
     container_name: recomendador-ci
     build:

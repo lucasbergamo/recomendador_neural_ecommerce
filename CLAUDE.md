@@ -39,6 +39,8 @@ make docker-up               # sobe MLflow server em localhost:5000 (imagem ofic
 make docker-data              # roda pipeline de dados em container (serviço data-pipeline)
 make docker-train-baselines   # baselines em container (requer --profile training)
 make docker-train             # NCF em container (requer --profile training)
+make docker-eval              # avalia models/ncf.pt em container (requer --profile training)
+make docker-register          # registra no MLflow Model Registry em container (requer --profile training, MLflow de pé)
 make docker-lint              # ruff em container (stage ci do Dockerfile)
 make docker-test              # pytest em container (stage ci do Dockerfile)
 ```

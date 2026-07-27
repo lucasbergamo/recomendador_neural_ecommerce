@@ -113,13 +113,15 @@ make eval
 make register
 ```
 
-**Docker, passo a passo** (equivalente ao `dvc repro`, mas manual):
+**Docker, passo a passo** (equivalente ao `dvc repro`, mas manual — tudo containerizado, sem depender de Poetry local):
 
 ```bash
 make docker-up
 make docker-data
 make docker-train-baselines
 make docker-train
+make docker-eval
+make docker-register
 ```
 
 </details>

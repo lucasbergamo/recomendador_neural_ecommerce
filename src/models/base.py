@@ -42,4 +42,4 @@ class BaseRecommender(ABC, nn.Module):
         torch.save(self.state_dict(), path)
 
     def load(self, path: Path) -> None:
-        self.load_state_dict(torch.load(path, weights_only=True))
+        self.load_state_dict(torch.load(path, map_location="cpu", weights_only=True))

@@ -1,4 +1,4 @@
-.PHONY: install lint format test validate data train-baselines train eval register docker-up docker-down docker-lint docker-test clean
+.PHONY: install lint format test validate data train-baselines train eval register docker-up docker-down docker-lint docker-test docker-eval docker-register clean
 
 export CURRENT_UID := $(shell id -u)
 export CURRENT_GID := $(shell id -g)
@@ -75,6 +75,12 @@ docker-train-baselines:
 
 docker-train:
 	docker compose --profile training run --rm train-model
+
+docker-eval:
+	docker compose --profile training run --rm evaluate
+
+docker-register:
+	docker compose --profile training run --rm register
 
 docker-down:
 	docker compose down
