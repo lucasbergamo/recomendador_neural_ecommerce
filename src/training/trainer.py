@@ -110,6 +110,10 @@ def run() -> None:
         model.load_state_dict(best_weights)
         mlflow.log_param("stopped_at_epoch", stopped_at)
 
+        val_metrics = evaluate_recommender(model, val_df, n_items, settings.top_k, device)
+        mlflow.log_metrics({f"val_{k}": v for k, v in val_metrics.items()})
+        logger.info("ncf_validated", **val_metrics)
+
         metrics = evaluate_recommender(model, test_df, n_items, settings.top_k, device)
         mlflow.log_metrics(metrics)
         logger.info("ncf_trained", **metrics)
@@ -121,7 +125,14 @@ def run() -> None:
 
         METRICS_DIR.mkdir(parents=True, exist_ok=True)
         with open(METRICS_DIR / "train_metrics.json", "w") as f:
-            json.dump({"stopped_at_epoch": stopped_at, "best_val_loss": best_val_loss}, f)
+            json.dump(
+                {
+                    "stopped_at_epoch": stopped_at,
+                    "best_val_loss": best_val_loss,
+                    **{f"val_{k}": v for k, v in val_metrics.items()},
+                },
+                f,
+            )
 
         logger.info("model_saved", path=str(model_path))
 

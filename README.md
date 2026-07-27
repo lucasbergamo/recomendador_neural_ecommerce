@@ -20,6 +20,38 @@ Item    → Embedding ─┘
 
 O modelo combina **Generalized Matrix Factorization (GMF)** — que captura interações lineares — com um **MLP** que captura não-linearidades, resultando na arquitetura **NeuMF** (He et al., 2017).
 
+### Pipeline de ponta a ponta
+
+```
+data/bronze (CSV) → preprocess → data/silver → feature_eng → data/gold
+                                                                  │
+                              ┌───────────────────────────────────┤
+                              ▼                                   ▼
+                    train_baselines (SVD/Popularity/Random)  train (NCF)
+                              │                                   │
+                              └──────────────┬────────────────────┘
+                                              ▼
+                                     evaluate (test set)
+                                              │
+                                              ▼
+                    MLflow (tracking, runs) → Model Registry (@staging/@production)
+```
+
+5 stages no `dvc.yaml` (`preprocess`, `feature_eng`, `train_baselines`, `train`, `evaluate`) — `dvc dag` mostra o grafo completo, `dvc repro` executa tudo automaticamente respeitando as dependências entre eles.
+
+---
+
+## Resultados
+
+| Modelo | NDCG@10 | Precision@10 | Recall@10 | HR@10 | MAP@10 |
+|---|---|---|---|---|---|
+| NCF (NeuMF) | 0.0345 | 0.0231 | 0.0445 | 0.1898 | 0.0148 |
+| Popularity | **0.0350** | 0.0244 | 0.0396 | 0.1983 | 0.0153 |
+| SVD | 0.0079 | 0.0051 | 0.0132 | 0.0509 | 0.0031 |
+| Random | 0.0061 | 0.0052 | 0.0064 | 0.0509 | 0.0020 |
+
+O NCF fica marginalmente abaixo do Popularity (dataset pequeno e denso favorece recomendação não-personalizada) — mesmo depois de testar 3 configs de tuning. Histórico completo do tuning, evidência dos runs no MLflow e leitura honesta desse trade-off no [Model Card](docs/model_card.md).
+
 ---
 
 ## Stack
@@ -32,6 +64,7 @@ O modelo combina **Generalized Matrix Factorization (GMF)** — que captura inte
 | Versionamento de dados | DVC — pipeline reprodutível |
 | Dependências | Poetry — lock file commitado |
 | Containerização | Docker multi-stage + docker-compose |
+| Serving | FastAPI + Uvicorn |
 | Qualidade de código | Ruff + pre-commit hooks |
 | Configuração | Pydantic Settings + .env |
 | Testes | Pytest |
@@ -40,51 +73,101 @@ O modelo combina **Generalized Matrix Factorization (GMF)** — que captura inte
 
 ## Início Rápido
 
-### Opção 1 — Local (Poetry)
+**Pré-requisitos:** Python 3.11+, [Poetry](https://python-poetry.org/), Docker + Docker Compose, git.
+
+Caminho recomendado — do zero até o modelo registrado:
 
 ```bash
-git clone https://github.com/lucascbergamo/recomendador_neural_ecommerce.git
+git clone https://github.com/lucasbergamo/recomendador_neural_ecommerce.git
 cd recomendador_neural_ecommerce
 
-# Instalar dependências
 poetry install
-
-# Configurar variáveis de ambiente
 cp .env.example .env
 
-# Validar ambiente (cria diretórios automaticamente)
-make validate
+make docker-up      # sobe o MLflow em container (localhost:5000)
+dvc repro           # pipeline completo: preprocess → feature_eng →
+                     # {train_baselines, train} → evaluate
 
-# Pipeline completo: download → preprocess → features → train → evaluate
+make test           # 26 testes, roda local (rápido, não precisa de container)
+make register       # registra o modelo final no MLflow Model Registry
+```
+
+Depois disso, em `http://localhost:5000`:
+- aba **Runs** (ou **Evaluation runs**, dependendo da versão da UI) do experimento `recommendation-system` — todos os runs de treino/baseline
+- **Models → ncf-recommender** — o modelo registrado, aliases `@staging` e `@production`
+
+> **Nota sobre o remote do DVC:** é local (`~/dvc-storage`, simula um bucket S3) — quem clona o repo não tem acesso a essa pasta, então `dvc pull` **não vai funcionar**. Isso é intencional: `dvc repro` reconstrói tudo do zero a partir dos CSVs brutos do MovieLens já commitados em `data/bronze/`, sem depender de nenhum remote externo.
+
+<details>
+<summary>Alternativas — sem Docker, ou passo a passo manual</summary>
+
+**Sem Docker** (MLflow local via Poetry, precisa estar rodando antes dos comandos de treino):
+
+```bash
+poetry install && cp .env.example .env
+make mlflow &        # ou outro terminal — acesse http://localhost:5000
+
 make data
 make train-baselines
 make train
 make eval
-
-# Visualizar experimentos
-make mlflow   # acesse http://localhost:5000
+make register
 ```
 
-### Opção 2 — Docker
+**Docker, passo a passo** (equivalente ao `dvc repro`, mas manual — tudo containerizado, sem depender de Poetry local):
 
 ```bash
-# Subir MLflow + pipeline de dados
 make docker-up
 make docker-data
-
-# Treinar modelo
+make docker-train-baselines
 make docker-train
-
-# Visualizar em http://localhost:5000
+make docker-eval
+make docker-register
+make docker-serve   # sobe a API HTTP servindo o modelo — ver seção "API de Recomendação"
 ```
 
-### Opção 3 — DVC (pipeline reprodutível)
+> **Ordem importa**: `docker-serve` empacota `models/ncf.pt` e `data/gold/metadata.parquet`
+> **dentro** da imagem (não via volume, como os outros serviços) — precisa rodar
+> `docker-train` antes, senão o build falha por falta desses arquivos.
+
+> **Recursos mínimos pra buildar**: as imagens incluem PyTorch, então o build é pesado.
+> Rode `make check-resources` antes (ou deixe `make docker-build` rodar automaticamente)
+> — recomendado 6GB+ de RAM disponíveis pro Docker e 10GB+ de disco livre. Com menos
+> que isso, o build pode travar a máquina em vez de só ficar lento.
+
+</details>
+
+---
+
+## API de Recomendação (Serving)
+
+Endpoint HTTP mínimo (FastAPI) que carrega `models/ncf.pt` uma vez na inicialização e
+expõe `recommend_top_k` — a mesma inferência usada em `evaluate`/`register`, agora
+acessível por fora do processo Python.
+
+**Local:**
 
 ```bash
-poetry install
-dvc repro      # executa todos os stages automaticamente
-dvc metrics show
+make docker-serve
+curl http://localhost:8000/health
+curl "http://localhost:8000/recommend/5?k=10"
 ```
+
+| Rota | Descrição |
+|---|---|
+| `GET /health` | Liveness check — `{"status": "ok"}` |
+| `GET /recommend/{user_id}?k=10` | Top-K itens recomendados, com `item_id` e `title`. `user_id` é o ID **reindexado** (0 a 942), não o ID original do MovieLens. `k` é opcional (default 10). |
+| `GET /docs` | Documentação interativa (Swagger UI), gerada automaticamente pelo FastAPI |
+
+`user_id` fora do intervalo `0..942` retorna `404` com mensagem explicando o range válido.
+
+**Na AWS (bônus — URL pública):** ver seção [Deploy na AWS](#deploy-na-aws-bônus) abaixo.
+
+> **Disponibilidade**: em produção, a API roda em capacidade **Spot** (ver seção AWS) —
+> mais barata, mas a AWS pode reciclar a instância a qualquer momento. O ECS repõe a
+> task automaticamente, mas existe uma janela curta (tipicamente alguns minutos) até
+> ela voltar a responder. Se a chamada falhar, **tente novamente em alguns minutos**
+> antes de assumir que está fora do ar.
 
 ---
 
@@ -123,10 +206,11 @@ recomendador_neural_ecommerce/
 │   ├── dataset.md           # Documentação do dataset
 │   └── monitoring_plan.md   # Plano de monitoramento
 ├── scripts/
-│   └── validate_env.py      # Valida ambiente + cria diretórios
-├── Dockerfile               # Multi-stage: builder + runtime
-├── docker-compose.yml       # MLflow server + trainer
-├── dvc.yaml                 # Pipeline: preprocess → feature_eng → train → evaluate
+│   ├── validate_env.py      # Valida ambiente + cria diretórios
+│   └── register_model.py    # Registra o modelo final no MLflow Model Registry
+├── Dockerfile               # Multi-stage: builder + runtime + ci (lint/test em container)
+├── docker-compose.yml       # MLflow server + data-pipeline + train-baselines + train-model + ci
+├── dvc.yaml                 # 5 stages: preprocess → feature_eng → {train_baselines, train} → evaluate
 ├── pyproject.toml           # Poetry — deps prod/dev separadas
 └── Makefile                 # Comandos de desenvolvimento
 ```
@@ -161,8 +245,8 @@ Todas as métricas são calculadas no test set com **leave-time-out split** (úl
 
 Documentação completa em [`docs/dataset.md`](docs/dataset.md).
 
-- **MovieLens 100K**: 100.836 interações, 943 usuários, 1.682 itens
-- Download automático via `make data`
+- **MovieLens 100K**: 100.000 ratings brutos (99.287 após filtro de cold-start), 943 usuários, 1.682 itens brutos (1.349 após filtro)
+- Download automático via `make data` (ou já commitado em `data/bronze/` — funciona sem internet)
 - Alternativas: RetailRocket, Instacart, Amazon Reviews (ver docs/dataset.md)
 
 ---
@@ -189,7 +273,7 @@ Os testes cobrem:
 | 1 — Clean Code | Estrutura, design patterns, linting | ✅ Concluída |
 | 2 — Dependências | Poetry, Pydantic Settings, validate_env | ✅ Concluída |
 | 3 — Containerização | Docker multi-stage, DVC pipeline, MLflow | ✅ Concluída |
-| 4 — Modelo Neural | NCF treinado, Model Registry, Model Card | 🔄 Em andamento |
+| 4 — Modelo Neural | NCF treinado, tuning (3 configs), Model Registry, Model Card | ✅ Concluída |
 
 ---
 

@@ -21,9 +21,13 @@ stages:
       size: 3302
     - path: src/data/preprocess.py
       hash: md5
-      md5: a0d371b77c3f8f4e843c63ea7c33e61c
-      size: 2997
+      md5: ec50078cdb32ea3d0e41dd970ad297a7
+      size: 3795
     outs:
+    - path: data/silver/item_id_map.parquet
+      hash: md5
+      md5: 1618bfd095adc15422d082943b2d018e
+      size: 16388
     - path: data/silver/items.parquet
       hash: md5
       md5: 3f4623b303253c537c9347bb4beaa3d6
@@ -113,8 +117,8 @@ stages:
       size: 88297
     - path: src/models/base.py
       hash: md5
-      md5: 9ef25f3132ce05d39a5a478fb1cde82d
-      size: 1758
+      md5: cca94f6ea98d4648960a65baa5af4284
+      size: 1778
     - path: src/models/factory.py
       hash: md5
       md5: 8b06ce1fd2699a7968c40f65707cd9a7
@@ -129,17 +133,21 @@ stages:
       size: 1682
     - path: src/training/trainer.py
       hash: md5
-      md5: e15b28eee57009adaff2e4bde2dfb8bf
-      size: 4687
+      md5: 908f3e3f66b620267c97d9bcb428438a
+      size: 5084
+    - path: src/utils/config.py
+      hash: md5
+      md5: 2d65a0a6a1adb7884d563ca335baba45
+      size: 864
     outs:
     - path: metrics/train_metrics.json
       hash: md5
-      md5: 838b46e11aa130c89eac7d3e8dc8ca4a
-      size: 61
+      md5: ac7bed129f66f29c363926cbe9caa310
+      size: 200
     - path: models/ncf.pt
       hash: md5
-      md5: 9463d3eb6241a3734ca87592a449d82f
-      size: 1285495
+      md5: 1d81f93a47f484c4a74ab53fdabbcc66
+      size: 665783
   evaluate:
     cmd: python -m src.evaluation.metrics
     deps:
@@ -153,8 +161,8 @@ stages:
       size: 87306
     - path: models/ncf.pt
       hash: md5
-      md5: 9463d3eb6241a3734ca87592a449d82f
-      size: 1285495
+      md5: 1d81f93a47f484c4a74ab53fdabbcc66
+      size: 665783
     - path: src/evaluation/metrics.py
       hash: md5
       md5: c0079e2faab864407a205c1f79c5071c
@@ -162,5 +170,5 @@ stages:
     outs:
     - path: metrics/eval_metrics.json
       hash: md5
-      md5: a30062e4b5460f9ce9bc02955834766e
+      md5: 8a82e212d14e29386ae000788961cec7
       size: 132

@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     mlflow_tracking_uri: str = "http://localhost:5000"
     mlflow_experiment_name: str = "recommendation-system"
 
-    embedding_dim: int = 64
+    embedding_dim: int = 32
     mlp_layers: list[int] = [128, 64, 32]
     dropout: float = 0.3
     learning_rate: float = 0.001

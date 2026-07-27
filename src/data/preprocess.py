@@ -51,9 +51,14 @@ def _filter_cold_start(df: pd.DataFrame) -> pd.DataFrame:
     return df[df["user_id"].isin(valid_users) & df["item_id"].isin(valid_items)]
 
 
-def _reindex_ids(df: pd.DataFrame) -> pd.DataFrame:
+def _build_id_maps(df: pd.DataFrame) -> tuple[dict[int, int], dict[int, int]]:
     user_map = {uid: idx for idx, uid in enumerate(sorted(df["user_id"].unique()))}
     item_map = {iid: idx for idx, iid in enumerate(sorted(df["item_id"].unique()))}
+    return user_map, item_map
+
+
+def _reindex_ids(df: pd.DataFrame) -> pd.DataFrame:
+    user_map, item_map = _build_id_maps(df)
     df = df.copy()
     df["user_id"] = df["user_id"].map(user_map)
     df["item_id"] = df["item_id"].map(item_map)
@@ -66,6 +71,16 @@ def save_silver(ratings: pd.DataFrame, items: pd.DataFrame, users: pd.DataFrame)
     items.to_parquet(DATA_SILVER_DIR / "items.parquet", index=False)
     users.to_parquet(DATA_SILVER_DIR / "users.parquet", index=False)
     logger.info("silver_saved", path=str(DATA_SILVER_DIR))
+
+
+def save_item_id_map(item_map: dict[int, int]) -> None:
+    """Persiste item_id original → reindexado — permite recuperar título depois do treino."""
+    DATA_SILVER_DIR.mkdir(parents=True, exist_ok=True)
+    df = pd.DataFrame(
+        {"item_id_original": list(item_map.keys()), "item_id": list(item_map.values())}
+    )
+    df.to_parquet(DATA_SILVER_DIR / "item_id_map.parquet", index=False)
+    logger.info("item_id_map_saved", n_items=len(df))
 
 
 def load_silver() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
@@ -81,6 +96,11 @@ def main() -> None:
     items = preprocess_items(items_raw)
     users = preprocess_users(users_raw)
     save_silver(ratings, items, users)
+
+    clean = ratings_raw.dropna(subset=["user_id", "item_id", "rating"])
+    filtered = _filter_cold_start(clean)
+    _, item_map = _build_id_maps(filtered)
+    save_item_id_map(item_map)
 
 
 if __name__ == "__main__":

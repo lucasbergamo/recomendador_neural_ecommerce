@@ -11,6 +11,7 @@ stages:
       - data/silver/ratings.parquet
       - data/silver/items.parquet
       - data/silver/users.parquet
+      - data/silver/item_id_map.parquet
 
   feature_eng:
     cmd: python -m src.data.features
@@ -44,6 +45,7 @@ stages:
       - src/models/ncf.py
       - src/models/base.py
       - src/models/factory.py
+      - src/utils/config.py
       - data/gold/train.parquet
       - data/gold/val.parquet
       - data/gold/metadata.parquet
