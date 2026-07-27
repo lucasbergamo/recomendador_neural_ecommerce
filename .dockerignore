@@ -12,10 +12,11 @@ mlartifacts/
 mlflow.db
 .env
 .env.*
-data/silver/
-data/gold/
-models/*.pt
-models/*.pth
+data/silver/ratings.parquet
+data/silver/users.parquet
+data/gold/train.parquet
+data/gold/val.parquet
+data/gold/test.parquet
 notebooks/
 docs/
 *.pdf

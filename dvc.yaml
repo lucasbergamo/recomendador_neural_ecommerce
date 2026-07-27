@@ -11,6 +11,7 @@ stages:
       - data/silver/ratings.parquet
       - data/silver/items.parquet
       - data/silver/users.parquet
+      - data/silver/item_id_map.parquet
 
   feature_eng:
     cmd: python -m src.data.features

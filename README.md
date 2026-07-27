@@ -64,6 +64,7 @@ O NCF fica marginalmente abaixo do Popularity (dataset pequeno e denso favorece 
 | Versionamento de dados | DVC — pipeline reprodutível |
 | Dependências | Poetry — lock file commitado |
 | Containerização | Docker multi-stage + docker-compose |
+| Serving | FastAPI + Uvicorn |
 | Qualidade de código | Ruff + pre-commit hooks |
 | Configuração | Pydantic Settings + .env |
 | Testes | Pytest |
@@ -122,9 +123,51 @@ make docker-train-baselines
 make docker-train
 make docker-eval
 make docker-register
+make docker-serve   # sobe a API HTTP servindo o modelo — ver seção "API de Recomendação"
 ```
 
+> **Ordem importa**: `docker-serve` empacota `models/ncf.pt` e `data/gold/metadata.parquet`
+> **dentro** da imagem (não via volume, como os outros serviços) — precisa rodar
+> `docker-train` antes, senão o build falha por falta desses arquivos.
+
+> **Recursos mínimos pra buildar**: as imagens incluem PyTorch, então o build é pesado.
+> Rode `make check-resources` antes (ou deixe `make docker-build` rodar automaticamente)
+> — recomendado 6GB+ de RAM disponíveis pro Docker e 10GB+ de disco livre. Com menos
+> que isso, o build pode travar a máquina em vez de só ficar lento.
+
 </details>
+
+---
+
+## API de Recomendação (Serving)
+
+Endpoint HTTP mínimo (FastAPI) que carrega `models/ncf.pt` uma vez na inicialização e
+expõe `recommend_top_k` — a mesma inferência usada em `evaluate`/`register`, agora
+acessível por fora do processo Python.
+
+**Local:**
+
+```bash
+make docker-serve
+curl http://localhost:8000/health
+curl "http://localhost:8000/recommend/5?k=10"
+```
+
+| Rota | Descrição |
+|---|---|
+| `GET /health` | Liveness check — `{"status": "ok"}` |
+| `GET /recommend/{user_id}?k=10` | Top-K itens recomendados, com `item_id` e `title`. `user_id` é o ID **reindexado** (0 a 942), não o ID original do MovieLens. `k` é opcional (default 10). |
+| `GET /docs` | Documentação interativa (Swagger UI), gerada automaticamente pelo FastAPI |
+
+`user_id` fora do intervalo `0..942` retorna `404` com mensagem explicando o range válido.
+
+**Na AWS (bônus — URL pública):** ver seção [Deploy na AWS](#deploy-na-aws-bônus) abaixo.
+
+> **Disponibilidade**: em produção, a API roda em capacidade **Spot** (ver seção AWS) —
+> mais barata, mas a AWS pode reciclar a instância a qualquer momento. O ECS repõe a
+> task automaticamente, mas existe uma janela curta (tipicamente alguns minutos) até
+> ela voltar a responder. Se a chamada falhar, **tente novamente em alguns minutos**
+> antes de assumir que está fora do ar.
 
 ---
 

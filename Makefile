@@ -1,4 +1,4 @@
-.PHONY: install lint format test validate data train-baselines train eval register docker-up docker-down docker-lint docker-test docker-eval docker-register clean
+.PHONY: install lint format test validate data train-baselines train eval register docker-up docker-down docker-lint docker-test docker-eval docker-register docker-serve clean
 
 export CURRENT_UID := $(shell id -u)
 export CURRENT_GID := $(shell id -g)
@@ -54,7 +54,10 @@ mlflow:
 	poetry run mlflow ui --port 5000
 
 # ── Docker ────────────────────────────────────────────────────────
-docker-build:
+check-resources:
+	bash scripts/check_docker_resources.sh
+
+docker-build: check-resources
 	docker compose build
 
 docker-lint:
@@ -81,6 +84,9 @@ docker-eval:
 
 docker-register:
 	docker compose --profile training run --rm register
+
+docker-serve:
+	docker compose up -d serve
 
 docker-down:
 	docker compose down

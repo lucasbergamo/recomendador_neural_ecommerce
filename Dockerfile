@@ -54,3 +54,16 @@ COPY configs/ ./configs/
 ENV PYTHONPATH=/app
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+
+# Stage 4 — serve: runtime + modelo treinado embutido, expõe a API HTTP.
+# Diferente dos outros serviços (que recebem data/models via volume), este stage
+# empacota o modelo DENTRO da imagem — é o que roda sozinho na AWS, sem disco local.
+FROM runtime AS serve
+
+COPY models/ncf.pt ./models/ncf.pt
+COPY data/gold/metadata.parquet ./data/gold/metadata.parquet
+COPY data/silver/items.parquet ./data/silver/items.parquet
+COPY data/silver/item_id_map.parquet ./data/silver/item_id_map.parquet
+
+EXPOSE 8000
+CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
