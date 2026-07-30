@@ -34,7 +34,25 @@ RUN python scripts/validate_env.py || true
 
 CMD ["python", "-m", "src.training.trainer"]
 
-# Stage 3 — ci: runtime + ferramentas de dev (ruff, pytest) para rodar lint/testes em container
+# Stage 3 — lint: só o ruff, NÃO parte do builder — não precisa de PyTorch/MLflow/etc.
+# pra checar sintaxe e estilo. Isolado de propósito: mais rápido, e não depende do
+# builder ter sucesso (menos ponto de falha, não mais).
+FROM python:3.11-slim AS lint
+
+WORKDIR /app
+
+RUN pip install --no-cache-dir "ruff>=0.7"
+
+COPY pyproject.toml ./
+COPY src/ ./src/
+COPY tests/ ./tests/
+
+ENV PYTHONPATH=/app
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Stage 4 — ci: runtime + pytest, para rodar os testes em container (precisa das
+# dependências reais, já que os testes importam e executam o código de verdade).
 FROM python:3.11-slim AS ci
 
 WORKDIR /app
@@ -42,7 +60,7 @@ WORKDIR /app
 COPY --from=builder /usr/local/lib/python3.11 /usr/local/lib/python3.11
 COPY --from=builder /usr/local/bin /usr/local/bin
 
-RUN pip install --no-cache-dir "ruff>=0.7" "pytest>=8.3" "pytest-cov>=5.0"
+RUN pip install --no-cache-dir "pytest>=8.3" "pytest-cov>=5.0"
 
 RUN mkdir -p data/bronze data/silver data/gold models metrics
 
@@ -55,7 +73,7 @@ ENV PYTHONPATH=/app
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Stage 4 — serve: runtime + modelo treinado embutido, expõe a API HTTP.
+# Stage 5 — serve: runtime + modelo treinado embutido, expõe a API HTTP.
 # Diferente dos outros serviços (que recebem data/models via volume), este stage
 # empacota o modelo DENTRO da imagem — é o que roda sozinho na AWS, sem disco local.
 FROM runtime AS serve
