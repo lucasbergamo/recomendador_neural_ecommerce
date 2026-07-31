@@ -246,7 +246,7 @@ Com o ambiente instalado, dois jeitos de rodar o pipeline de dados/treino:
 make lint
 make mlflow &        # ou outro terminal — acesse http://localhost:5000
 
-dvc repro            # pipeline completo: preprocess → feature_eng →
+poetry run dvc repro  # pipeline completo: preprocess → feature_eng →
                       # {train_baselines, train} → evaluate
 
 make test             # 29 testes — DEPOIS do dvc repro (mesmo motivo do Caminho 1)

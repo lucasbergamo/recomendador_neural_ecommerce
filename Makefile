@@ -47,7 +47,7 @@ register:
 
 # Pipeline completo via DVC
 pipeline:
-	dvc repro
+	poetry run dvc repro
 
 # ── MLflow ────────────────────────────────────────────────────────
 mlflow:
