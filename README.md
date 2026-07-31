@@ -19,9 +19,9 @@ Sistema de recomendação de produtos baseado no comportamento de navegação do
 - [Arquitetura](#arquitetura)
 - [Resultados](#resultados)
 - [Stack](#stack)
+- [Estrutura do Projeto](#estrutura-do-projeto)
 - [Início Rápido](#início-rápido)
 - [API de Recomendação (Serving)](#api-de-recomendação-serving)
-- [Estrutura do Projeto](#estrutura-do-projeto)
 - [Design Patterns](#design-patterns)
 - [Métricas de Avaliação](#métricas-de-avaliação)
 - [Dataset](#dataset)
@@ -105,6 +105,52 @@ O NCF fica marginalmente abaixo do Popularity (dataset pequeno e denso favorece 
 
 ---
 
+## Estrutura do Projeto
+
+```
+recomendador_neural_ecommerce/
+├── src/
+│   ├── data/
+│   │   ├── load.py          # Download MovieLens 100K
+│   │   ├── preprocess.py    # Bronze → Silver
+│   │   ├── features.py      # Silver → Gold (interaction matrix, splits)
+│   │   └── pipeline.py      # Orquestrador do pipeline de dados
+│   ├── models/
+│   │   ├── base.py          # Template Method: BaseRecommender
+│   │   ├── ncf.py           # NeuMF — GMF + MLP
+│   │   ├── baselines.py     # SVD, Popularity, Random
+│   │   └── factory.py       # Factory Pattern: cria modelos por nome
+│   ├── training/
+│   │   ├── trainer.py       # Loop de treino + early stopping + MLflow
+│   │   ├── train_baselines.py
+│   │   └── strategies.py    # Strategy Pattern: Adam, AdamW, SGD
+│   ├── evaluation/
+│   │   └── metrics.py       # NDCG@K, Precision@K, Recall@K, HR@K, MAP@K
+│   └── utils/
+│       ├── config.py        # Pydantic Settings + paths
+│       ├── logger.py        # Structlog
+│       └── reproducibility.py
+├── tests/                   # Pytest: smoke, unit, integration
+├── data/
+│   ├── bronze/              # Dados brutos (DVC)
+│   ├── silver/              # Dados limpos (DVC)
+│   └── gold/                # Features prontas (DVC)
+├── docs/
+│   ├── model_card.md        # Documentação do modelo
+│   ├── dataset.md           # Documentação do dataset
+│   └── monitoring_plan.md   # Plano de monitoramento
+├── scripts/
+│   ├── validate_env.py      # Valida ambiente + cria diretórios
+│   └── register_model.py    # Registra o modelo final no MLflow Model Registry
+├── Dockerfile               # Multi-stage: builder + runtime + ci (lint/test em container)
+├── docker-compose.yml       # MLflow server + data-pipeline + train-baselines + train-model + ci
+├── dvc.yaml                 # 5 stages: preprocess → feature_eng → {train_baselines, train} → evaluate
+├── pyproject.toml           # Poetry — deps prod/dev separadas
+└── Makefile                 # Comandos de desenvolvimento
+```
+
+---
+
 ## Início Rápido
 
 **Pré-requisitos:** Python 3.11+, [Poetry](https://python-poetry.org/), Docker + Docker Compose, git.
@@ -114,10 +160,9 @@ git clone https://github.com/lucasbergamo/recomendador_neural_ecommerce.git
 cd recomendador_neural_ecommerce
 ```
 
-O projeto tem **dois caminhos completos e independentes** — não é "principal e alternativa
-escondida", são **dois critérios de avaliação separados** do enunciado (**Docker: 15%** e
-**Reprodutibilidade: 15%**), cada um testado de ponta a ponta numa máquina nunca usada
-antes. Escolha um dos dois, ou rode os dois.
+O projeto tem **dois caminhos completos e independentes**, cada um mapeado a um critério
+de avaliação do enunciado (**Docker: 15%** e **Reprodutibilidade: 15%**) e testado de ponta
+a ponta numa máquina limpa. Escolha um dos dois, ou rode os dois.
 
 ### 🐳 Caminho 1 — Docker
 
@@ -274,52 +319,6 @@ curl "http://localhost:8000/recommend/5?k=10"
 
 ---
 
-## Estrutura do Projeto
-
-```
-recomendador_neural_ecommerce/
-├── src/
-│   ├── data/
-│   │   ├── load.py          # Download MovieLens 100K
-│   │   ├── preprocess.py    # Bronze → Silver
-│   │   ├── features.py      # Silver → Gold (interaction matrix, splits)
-│   │   └── pipeline.py      # Orquestrador do pipeline de dados
-│   ├── models/
-│   │   ├── base.py          # Template Method: BaseRecommender
-│   │   ├── ncf.py           # NeuMF — GMF + MLP
-│   │   ├── baselines.py     # SVD, Popularity, Random
-│   │   └── factory.py       # Factory Pattern: cria modelos por nome
-│   ├── training/
-│   │   ├── trainer.py       # Loop de treino + early stopping + MLflow
-│   │   ├── train_baselines.py
-│   │   └── strategies.py    # Strategy Pattern: Adam, AdamW, SGD
-│   ├── evaluation/
-│   │   └── metrics.py       # NDCG@K, Precision@K, Recall@K, HR@K, MAP@K
-│   └── utils/
-│       ├── config.py        # Pydantic Settings + paths
-│       ├── logger.py        # Structlog
-│       └── reproducibility.py
-├── tests/                   # Pytest: smoke, unit, integration
-├── data/
-│   ├── bronze/              # Dados brutos (DVC)
-│   ├── silver/              # Dados limpos (DVC)
-│   └── gold/                # Features prontas (DVC)
-├── docs/
-│   ├── model_card.md        # Documentação do modelo
-│   ├── dataset.md           # Documentação do dataset
-│   └── monitoring_plan.md   # Plano de monitoramento
-├── scripts/
-│   ├── validate_env.py      # Valida ambiente + cria diretórios
-│   └── register_model.py    # Registra o modelo final no MLflow Model Registry
-├── Dockerfile               # Multi-stage: builder + runtime + ci (lint/test em container)
-├── docker-compose.yml       # MLflow server + data-pipeline + train-baselines + train-model + ci
-├── dvc.yaml                 # 5 stages: preprocess → feature_eng → {train_baselines, train} → evaluate
-├── pyproject.toml           # Poetry — deps prod/dev separadas
-└── Makefile                 # Comandos de desenvolvimento
-```
-
----
-
 ## Design Patterns
 
 | Pattern | Onde | Por quê |
@@ -372,8 +371,8 @@ Os testes cobrem:
 ## Deploy na AWS (bônus)
 
 A API de recomendação (seção anterior) está publicada com **URL pública real**, atendendo
-ao critério de bônus do enunciado ("container acessível via URL pública") — não é só uma
-prova pontual de que o container roda, é um serviço vivo.
+ao critério de bônus do enunciado ("container acessível via URL pública") — o serviço fica
+disponível continuamente, não apenas durante uma execução pontual de demonstração.
 
 ```
 Internet → API Gateway (REST API, HTTPS gerenciado)
