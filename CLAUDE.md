@@ -6,15 +6,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 # Setup
-poetry install
+make install        # poetry install
 cp .env.example .env
+make validate        # sanity check: Python, pacotes-chave, diretórios, .env
 
 # Qualidade de código
 make lint          # ruff check + format check
 make format        # ruff autofix
 
 # Testes
-make test                            # todos os testes
+make test                            # todos os testes + cobertura (--cov=src)
 pytest tests/test_models.py -v      # arquivo específico
 pytest tests/test_models.py::test_ncf_forward_shape  # teste único
 
@@ -30,9 +31,12 @@ make eval              # avalia modelo salvo em models/ncf.pt
 make register       # registra models/ncf.pt no MLflow Model Registry,
                      # promove via aliases @staging → @production
 
+# Serving
+make serve          # sobe a API (uvicorn) em localhost:8000
+
 # Pipeline completo reprodutível (5 stages: preprocess, feature_eng,
 # train_baselines, train, evaluate)
-dvc repro
+make pipeline       # poetry run dvc repro
 
 # Docker
 make docker-up               # sobe MLflow server em localhost:5000 (imagem oficial)
@@ -42,7 +46,8 @@ make docker-train             # NCF em container (requer --profile training)
 make docker-eval              # avalia models/ncf.pt em container (requer --profile training)
 make docker-register          # registra no MLflow Model Registry em container (requer --profile training, MLflow de pé)
 make docker-lint              # ruff em container (stage ci do Dockerfile)
-make docker-test              # pytest em container (stage ci do Dockerfile)
+make docker-test              # pytest + cobertura em container (stage ci do Dockerfile)
+make docker-serve             # sobe a API em container (localhost:8000, modelo embutido na imagem)
 ```
 
 ## Arquitetura

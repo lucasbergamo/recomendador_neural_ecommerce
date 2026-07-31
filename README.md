@@ -19,9 +19,9 @@ Sistema de recomendação de produtos baseado no comportamento de navegação do
 - [Arquitetura](#arquitetura)
 - [Resultados](#resultados)
 - [Stack](#stack)
+- [Estrutura do Projeto](#estrutura-do-projeto)
 - [Início Rápido](#início-rápido)
 - [API de Recomendação (Serving)](#api-de-recomendação-serving)
-- [Estrutura do Projeto](#estrutura-do-projeto)
 - [Design Patterns](#design-patterns)
 - [Métricas de Avaliação](#métricas-de-avaliação)
 - [Dataset](#dataset)
@@ -105,6 +105,52 @@ O NCF fica marginalmente abaixo do Popularity (dataset pequeno e denso favorece 
 
 ---
 
+## Estrutura do Projeto
+
+```
+recomendador_neural_ecommerce/
+├── src/
+│   ├── data/
+│   │   ├── load.py          # Download MovieLens 100K
+│   │   ├── preprocess.py    # Bronze → Silver
+│   │   ├── features.py      # Silver → Gold (interaction matrix, splits)
+│   │   └── pipeline.py      # Orquestrador do pipeline de dados
+│   ├── models/
+│   │   ├── base.py          # Template Method: BaseRecommender
+│   │   ├── ncf.py           # NeuMF — GMF + MLP
+│   │   ├── baselines.py     # SVD, Popularity, Random
+│   │   └── factory.py       # Factory Pattern: cria modelos por nome
+│   ├── training/
+│   │   ├── trainer.py       # Loop de treino + early stopping + MLflow
+│   │   ├── train_baselines.py
+│   │   └── strategies.py    # Strategy Pattern: Adam, AdamW, SGD
+│   ├── evaluation/
+│   │   └── metrics.py       # NDCG@K, Precision@K, Recall@K, HR@K, MAP@K
+│   └── utils/
+│       ├── config.py        # Pydantic Settings + paths
+│       ├── logger.py        # Structlog
+│       └── reproducibility.py
+├── tests/                   # Pytest: smoke, unit, integration
+├── data/
+│   ├── bronze/              # Dados brutos (DVC)
+│   ├── silver/              # Dados limpos (DVC)
+│   └── gold/                # Features prontas (DVC)
+├── docs/
+│   ├── model_card.md        # Documentação do modelo
+│   ├── dataset.md           # Documentação do dataset
+│   └── monitoring_plan.md   # Plano de monitoramento
+├── scripts/
+│   ├── validate_env.py      # Valida ambiente + cria diretórios
+│   └── register_model.py    # Registra o modelo final no MLflow Model Registry
+├── Dockerfile               # Multi-stage: builder + runtime + ci (lint/test em container)
+├── docker-compose.yml       # MLflow server + data-pipeline + train-baselines + train-model + ci
+├── dvc.yaml                 # 5 stages: preprocess → feature_eng → {train_baselines, train} → evaluate
+├── pyproject.toml           # Poetry — deps prod/dev separadas
+└── Makefile                 # Comandos de desenvolvimento
+```
+
+---
+
 ## Início Rápido
 
 **Pré-requisitos:** Python 3.11+, [Poetry](https://python-poetry.org/), Docker + Docker Compose, git.
@@ -114,10 +160,9 @@ git clone https://github.com/lucasbergamo/recomendador_neural_ecommerce.git
 cd recomendador_neural_ecommerce
 ```
 
-O projeto tem **dois caminhos completos e independentes** — não é "principal e alternativa
-escondida", são **dois critérios de avaliação separados** do enunciado (**Docker: 15%** e
-**Reprodutibilidade: 15%**), cada um testado de ponta a ponta numa máquina nunca usada
-antes. Escolha um dos dois, ou rode os dois.
+O projeto tem **dois caminhos completos e independentes**, cada um mapeado a um critério
+de avaliação do enunciado (**Docker: 15%** e **Reprodutibilidade: 15%**) e testado de ponta
+a ponta numa máquina limpa. Escolha um dos dois, ou rode os dois.
 
 ### 🐳 Caminho 1 — Docker
 
@@ -181,34 +226,49 @@ caminho que o critério "Reprodutibilidade" avalia especificamente: instalação
 Poetry, lock file, `.env`.
 
 ```bash
-poetry install
+make install
 cp .env.example .env
+make validate         # sanity check: Python, pacotes-chave, diretórios, .env
 ```
 
 > [!IMPORTANT]
-> **Instalando o Poetry**: use o instalador oficial, **não** o pacote do gerenciador do
-> sistema (`apt install python3-poetry` no Ubuntu/Debian instala uma versão antiga demais,
-> incompatível com o `poetry.lock` deste repo — gerado pelo Poetry 2.x):
+> **Instalando o Poetry**: duas formas, escolha uma.
+>
+> **Opção 1 — instalador oficial (recomendado)**: instala a mesma versão major (2.x) usada
+> pra gerar o `poetry.lock` deste repo (Poetry 2.4.1) — sem avisos, compatibilidade garantida.
 > ```bash
 > curl -sSL https://install.python-poetry.org | python3 -
 > ```
-> Se `poetry --version` não for reconhecido depois, adicione `~/.local/bin` ao `PATH`.
+> Se `poetry --version` não for reconhecido depois, o instalador colocou o binário em
+> `~/.local/bin`, que pode não estar no seu `PATH` ainda:
+> ```bash
+> echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+> source ~/.bashrc
+> ```
+>
+> **Opção 2 — pacote do gerenciador do sistema** (`apt install python3-poetry` no
+> Ubuntu/Debian): mais simples se você já usa Poetry pra outros projetos, mas costuma trazer
+> uma versão mais antiga (testamos com 1.8.2). Nesse caso o `poetry install` emite um aviso
+> de possível incompatibilidade do lock file — testamos e, na prática, instalou tudo
+> corretamente mesmo assim. Funciona, mas sem a garantia formal que a Opção 1 tem.
 
 Com o ambiente instalado, dois jeitos de rodar o pipeline de dados/treino:
 
-**Opção A — `dvc repro`** (recomendado — reaproveita cache por hash, só refaz o que mudou):
+**Opção A — `make pipeline`** (recomendado — usa `dvc repro`, reaproveita cache por hash,
+só refaz o que mudou):
 ```bash
 make lint
 make mlflow &        # ou outro terminal — acesse http://localhost:5000
 
-dvc repro            # pipeline completo: preprocess → feature_eng →
+make pipeline         # dvc repro: preprocess → feature_eng →
                       # {train_baselines, train} → evaluate
 
-make test             # 29 testes — DEPOIS do dvc repro (mesmo motivo do Caminho 1)
+make test             # 29 testes + cobertura — DEPOIS do pipeline (mesmo motivo do Caminho 1)
 make register
+make serve &          # sobe a API HTTP servindo o modelo (localhost:8000)
 ```
 
-**Opção B — stages manuais, um a um** (mesmo resultado do `dvc repro`, sem a lógica de cache):
+**Opção B — stages manuais, um a um** (mesmo resultado do `make pipeline`, sem a lógica de cache):
 ```bash
 make lint
 make mlflow &
@@ -219,6 +279,7 @@ make train
 make eval
 make test
 make register
+make serve &
 ```
 
 > [!NOTE]
@@ -247,10 +308,18 @@ Endpoint HTTP mínimo (FastAPI) que carrega `models/ncf.pt` uma vez na inicializ
 expõe `recommend_top_k` — a mesma inferência usada em `evaluate`/`register`, agora
 acessível por fora do processo Python.
 
-**Local:**
+**Local (Docker):**
 
 ```bash
 make docker-serve
+curl http://localhost:8000/health
+curl "http://localhost:8000/recommend/5?k=10"
+```
+
+**Local (Poetry, sem Docker):**
+
+```bash
+make serve &
 curl http://localhost:8000/health
 curl "http://localhost:8000/recommend/5?k=10"
 ```
@@ -271,52 +340,6 @@ curl "http://localhost:8000/recommend/5?k=10"
 > task automaticamente, mas existe uma janela curta (tipicamente alguns minutos) até
 > ela voltar a responder. Se a chamada falhar, **tente novamente em alguns minutos**
 > antes de assumir que está fora do ar.
-
----
-
-## Estrutura do Projeto
-
-```
-recomendador_neural_ecommerce/
-├── src/
-│   ├── data/
-│   │   ├── load.py          # Download MovieLens 100K
-│   │   ├── preprocess.py    # Bronze → Silver
-│   │   ├── features.py      # Silver → Gold (interaction matrix, splits)
-│   │   └── pipeline.py      # Orquestrador do pipeline de dados
-│   ├── models/
-│   │   ├── base.py          # Template Method: BaseRecommender
-│   │   ├── ncf.py           # NeuMF — GMF + MLP
-│   │   ├── baselines.py     # SVD, Popularity, Random
-│   │   └── factory.py       # Factory Pattern: cria modelos por nome
-│   ├── training/
-│   │   ├── trainer.py       # Loop de treino + early stopping + MLflow
-│   │   ├── train_baselines.py
-│   │   └── strategies.py    # Strategy Pattern: Adam, AdamW, SGD
-│   ├── evaluation/
-│   │   └── metrics.py       # NDCG@K, Precision@K, Recall@K, HR@K, MAP@K
-│   └── utils/
-│       ├── config.py        # Pydantic Settings + paths
-│       ├── logger.py        # Structlog
-│       └── reproducibility.py
-├── tests/                   # Pytest: smoke, unit, integration
-├── data/
-│   ├── bronze/              # Dados brutos (DVC)
-│   ├── silver/              # Dados limpos (DVC)
-│   └── gold/                # Features prontas (DVC)
-├── docs/
-│   ├── model_card.md        # Documentação do modelo
-│   ├── dataset.md           # Documentação do dataset
-│   └── monitoring_plan.md   # Plano de monitoramento
-├── scripts/
-│   ├── validate_env.py      # Valida ambiente + cria diretórios
-│   └── register_model.py    # Registra o modelo final no MLflow Model Registry
-├── Dockerfile               # Multi-stage: builder + runtime + ci (lint/test em container)
-├── docker-compose.yml       # MLflow server + data-pipeline + train-baselines + train-model + ci
-├── dvc.yaml                 # 5 stages: preprocess → feature_eng → {train_baselines, train} → evaluate
-├── pyproject.toml           # Poetry — deps prod/dev separadas
-└── Makefile                 # Comandos de desenvolvimento
-```
 
 ---
 
@@ -357,8 +380,7 @@ Documentação completa em [`docs/dataset.md`](docs/dataset.md).
 ## Testes
 
 ```bash
-make test        # todos os testes
-make test-cov    # com relatório de cobertura
+make test        # todos os testes, com relatório de cobertura (--cov=src)
 ```
 
 Os testes cobrem:
@@ -372,8 +394,8 @@ Os testes cobrem:
 ## Deploy na AWS (bônus)
 
 A API de recomendação (seção anterior) está publicada com **URL pública real**, atendendo
-ao critério de bônus do enunciado ("container acessível via URL pública") — não é só uma
-prova pontual de que o container roda, é um serviço vivo.
+ao critério de bônus do enunciado ("container acessível via URL pública") — o serviço fica
+disponível continuamente, não apenas durante uma execução pontual de demonstração.
 
 ```
 Internet → API Gateway (REST API, HTTPS gerenciado)

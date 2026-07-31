@@ -1,4 +1,4 @@
-.PHONY: install lint format test validate data train-baselines train eval register docker-up docker-down docker-lint docker-test docker-eval docker-register docker-serve clean
+.PHONY: install lint format test validate data train-baselines train eval register serve pipeline mlflow docker-up docker-down docker-lint docker-test docker-eval docker-register docker-serve clean
 
 export CURRENT_UID := $(shell id -u)
 export CURRENT_GID := $(shell id -g)
@@ -21,9 +21,6 @@ format:
 
 # ── Testes ────────────────────────────────────────────────────────
 test:
-	poetry run pytest tests/ -v --tb=short
-
-test-cov:
 	poetry run pytest tests/ -v --tb=short --cov=src --cov-report=term-missing
 
 # ── Pipeline de dados ─────────────────────────────────────────────
@@ -45,9 +42,13 @@ eval:
 register:
 	poetry run python -m scripts.register_model
 
+# ── Serving ───────────────────────────────────────────────────────
+serve:
+	poetry run uvicorn src.api.main:app --host 0.0.0.0 --port 8000
+
 # Pipeline completo via DVC
 pipeline:
-	dvc repro
+	poetry run dvc repro
 
 # ── MLflow ────────────────────────────────────────────────────────
 mlflow:
@@ -65,7 +66,7 @@ docker-lint:
 	docker compose --profile ci run --rm lint ruff format --check src/ tests/
 
 docker-test:
-	docker compose --profile ci run --rm ci pytest tests/ -v --tb=short
+	docker compose --profile ci run --rm ci pytest tests/ -v --tb=short --cov=src --cov-report=term-missing
 
 docker-up:
 	docker compose up -d mlflow
