@@ -119,7 +119,7 @@ escondida", são **dois critérios de avaliação separados** do enunciado (**Do
 **Reprodutibilidade: 15%**), cada um testado de ponta a ponta numa máquina nunca usada
 antes. Escolha um dos dois, ou rode os dois.
 
-### 🐳 Caminho 1 — Docker (o mais testado)
+### 🐳 Caminho 1 — Docker
 
 <details open>
 <summary><strong>Passo a passo completo</strong></summary>
@@ -400,6 +400,17 @@ Internet → API Gateway (REST API, HTTPS gerenciado)
   novo em alguns minutos antes de assumir que está fora do ar.
 - **Desligar depois de usar**: `cd infra && terraform destroy` remove todos os recursos —
   evita gastar o budget do lab à toa depois da correção.
+
+### Decisões de arquitetura (por quê, não só o quê)
+
+| Decisão | Por quê |
+|---|---|
+| API Gateway REST API (v1), não HTTP API (v2) | Só a v1 tem Usage Plan + API Key nativos — autenticação de chamador sem escrever middleware próprio |
+| Subnet privada + VPC Endpoints, não NAT Gateway | NAT Gateway exige Elastic IP, comumente restrito em Learner Labs; os endpoints dão só o acesso que o container precisa (ECR, CloudWatch), sem rota nenhuma pra internet real |
+| Network Load Balancer, não Application Load Balancer | Existe só porque o VPC Link do API Gateway REST v1 exige um NLB como alvo técnico — não é sobre balancear carga (só existe 1 task) |
+| ECS Fargate, não EC2 gerenciado | Só 1 serviço — sem vantagem de empacotar vários containers numa frota (onde EC2 ganharia por densidade); Fargate elimina overhead operacional (sem patch de SO, sem Auto Scaling Group) |
+| Fargate Spot, não On-Demand | NLB + VPC Endpoints já são custo fixo maior que o compute em si — trocar Spot/On-Demand move só uma fração do custo total; Spot escolhido conscientemente, aceitando a janela de indisponibilidade documentada acima, sem precisar de ferramenta externa pro self-healing (é comportamento nativo do ECS Service) |
+| Terraform, não console/aws-cli manual | ~30 recursos com referência cruzada entre si (subnet → security group → NLB → ECS → API Gateway...) — declarativo é a forma confiável de montar e desmontar isso (`terraform destroy` limpa tudo de uma vez) |
 
 ---
 
