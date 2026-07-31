@@ -119,16 +119,22 @@ make register
 
 ```bash
 make docker-up
+make docker-lint
 make docker-data
 make docker-train-baselines
 make docker-train
 make docker-eval
+make docker-test    # roda depois dos dados existirem — os testes de API carregam
+                     # data/gold/metadata.parquet de verdade, não com dado sintético
 make docker-register
 make docker-serve   # sobe a API HTTP servindo o modelo — ver seção "API de Recomendação"
 ```
 
-> **Ordem importa**: `docker-serve` empacota `models/ncf.pt` e `data/gold/metadata.parquet`
-> **dentro** da imagem (não via volume, como os outros serviços) — precisa rodar
+> **Ordem importa**: `docker-test` inclui os testes de `test_api.py`, que sobem a API de
+> verdade e carregam `data/gold/metadata.parquet` — rodar antes de `docker-data`/`docker-train`
+> derruba esses 3 testes com `FileNotFoundError` (os outros 26 não dependem disso e passam
+> normalmente). `docker-serve` empacota `models/ncf.pt` e `data/gold/metadata.parquet`
+> **dentro** da imagem (não via volume, como os outros serviços) — também precisa rodar
 > `docker-train` antes, senão o build falha por falta desses arquivos.
 
 > **Recursos mínimos pra buildar**: as imagens incluem PyTorch, então o build é pesado.
