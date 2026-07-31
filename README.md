@@ -1,8 +1,35 @@
 # Recomendador Neural E-commerce
 
+![Python](https://img.shields.io/badge/python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)
+![PyTorch](https://img.shields.io/badge/PyTorch-2.x-EE4C2C?style=flat-square&logo=pytorch&logoColor=white)
+![MLflow](https://img.shields.io/badge/MLflow-2.15+-0194E2?style=flat-square&logo=mlflow&logoColor=white)
+![DVC](https://img.shields.io/badge/DVC-3.67+-945DD6?style=flat-square&logo=dvc&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-multi--stage-2496ED?style=flat-square&logo=docker&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?style=flat-square&logo=fastapi&logoColor=white)
+![Terraform](https://img.shields.io/badge/Terraform-AWS-7B42BC?style=flat-square&logo=terraform&logoColor=white)
+![Ruff](https://img.shields.io/badge/linting-ruff-FCC21B?style=flat-square)
+![Testes](https://img.shields.io/badge/testes-29%20passando-brightgreen?style=flat-square)
+
 Sistema de recomendação de produtos baseado no comportamento de navegação dos usuários, implementado com **Neural Collaborative Filtering (NCF/NeuMF)** em PyTorch. Pipeline completo containerizado com Docker, dados versionados com DVC e experimentos rastreados no MLflow.
 
 > **Tech Challenge Fase 02 — FIAP Pós-Tech MLET**
+
+## Sumário
+
+- [Arquitetura](#arquitetura)
+- [Resultados](#resultados)
+- [Stack](#stack)
+- [Início Rápido](#início-rápido)
+- [API de Recomendação (Serving)](#api-de-recomendação-serving)
+- [Estrutura do Projeto](#estrutura-do-projeto)
+- [Design Patterns](#design-patterns)
+- [Métricas de Avaliação](#métricas-de-avaliação)
+- [Dataset](#dataset)
+- [Testes](#testes)
+- [Deploy na AWS (bônus)](#deploy-na-aws-bônus)
+- [Critérios de Avaliação](#critérios-de-avaliação)
+- [Etapas de Desenvolvimento](#etapas-de-desenvolvimento)
+- [Contribuindo](#contribuindo)
 
 ---
 
@@ -22,19 +49,25 @@ O modelo combina **Generalized Matrix Factorization (GMF)** — que captura inte
 
 ### Pipeline de ponta a ponta
 
-```
-data/bronze (CSV) → preprocess → data/silver → feature_eng → data/gold
-                                                                  │
-                              ┌───────────────────────────────────┤
-                              ▼                                   ▼
-                    train_baselines (SVD/Popularity/Random)  train (NCF)
-                              │                                   │
-                              └──────────────┬────────────────────┘
-                                              ▼
-                                     evaluate (test set)
-                                              │
-                                              ▼
-                    MLflow (tracking, runs) → Model Registry (@staging/@production)
+```mermaid
+flowchart LR
+    A["📄 Bronze\nCSVs MovieLens"] -->|preprocess| B["🥈 Silver\nlimpo + reindexado"]
+    B -->|feature_eng| C["🥇 Gold\ntrain / val / test"]
+    C --> D1["📊 Baselines\nSVD, Popularity, Random"]
+    C --> D2["🧠 NCF\nGMF + MLP"]
+    D1 --> E["📈 evaluate\ntest set"]
+    D2 --> E
+    E --> F["🏷️ MLflow Registry\n@staging / @production"]
+    F --> G["🌐 API FastAPI\n/recommend"]
+
+    style A fill:#cd7f32,color:#fff
+    style B fill:#c0c0c0,color:#000
+    style C fill:#ffd700,color:#000
+    style D1 fill:#6366f1,color:#fff
+    style D2 fill:#6366f1,color:#fff
+    style E fill:#0891b2,color:#fff
+    style F fill:#dc2626,color:#fff
+    style G fill:#059669,color:#fff
 ```
 
 5 stages no `dvc.yaml` (`preprocess`, `feature_eng`, `train_baselines`, `train`, `evaluate`) — `dvc dag` mostra o grafo completo, `dvc repro` executa tudo automaticamente respeitando as dependências entre eles.
@@ -99,7 +132,8 @@ Depois disso, em `http://localhost:5000`:
 - aba **Runs** (ou **Evaluation runs**, dependendo da versão da UI) do experimento `recommendation-system` — todos os runs de treino/baseline
 - **Models → ncf-recommender** — o modelo registrado, aliases `@staging` e `@production`
 
-> **Nota sobre o remote do DVC:** é local (`~/dvc-storage`, simula um bucket S3) — quem clona o repo não tem acesso a essa pasta, então `dvc pull` **não vai funcionar**. Isso é intencional: `dvc repro` reconstrói tudo do zero a partir dos CSVs brutos do MovieLens já commitados em `data/bronze/`, sem depender de nenhum remote externo.
+> [!NOTE]
+> **Remote do DVC**: é local (`~/dvc-storage`, simula um bucket S3) — quem clona o repo não tem acesso a essa pasta, então `dvc pull` **não vai funcionar**. Isso é intencional: `dvc repro` reconstrói tudo do zero a partir dos CSVs brutos do MovieLens já commitados em `data/bronze/`, sem depender de nenhum remote externo.
 
 <details>
 <summary>Alternativas — sem Docker, ou passo a passo manual</summary>
@@ -135,6 +169,7 @@ make docker-register
 make docker-serve   # sobe a API HTTP servindo o modelo — ver seção "API de Recomendação"
 ```
 
+> [!WARNING]
 > **Ordem importa**: `docker-test` inclui os testes de `test_api.py`, que sobem a API de
 > verdade e carregam `data/gold/metadata.parquet` — rodar antes de `docker-data`/`docker-train`
 > derruba esses 3 testes com `FileNotFoundError` (os outros 26 não dependem disso e passam
@@ -142,6 +177,7 @@ make docker-serve   # sobe a API HTTP servindo o modelo — ver seção "API de 
 > **dentro** da imagem (não via volume, como os outros serviços) — também precisa rodar
 > `docker-train` antes, senão o build falha por falta desses arquivos.
 
+> [!WARNING]
 > **Recursos mínimos pra buildar**: as imagens incluem PyTorch, então o build é pesado.
 > Rode `make check-resources` antes (ou deixe `make docker-build` rodar automaticamente)
 > — recomendado 6GB+ de RAM disponíveis pro Docker e 10GB+ de disco livre. Com menos
@@ -175,6 +211,7 @@ curl "http://localhost:8000/recommend/5?k=10"
 
 **Na AWS (bônus — URL pública):** ver seção [Deploy na AWS](#deploy-na-aws-bônus) abaixo.
 
+> [!NOTE]
 > **Disponibilidade**: em produção, a API roda em capacidade **Spot** (ver seção AWS) —
 > mais barata, mas a AWS pode reciclar a instância a qualquer momento. O ECS repõe a
 > task automaticamente, mas existe uma janela curta (tipicamente alguns minutos) até
@@ -309,6 +346,23 @@ Internet → API Gateway (REST API, HTTPS gerenciado)
   novo em alguns minutos antes de assumir que está fora do ar.
 - **Desligar depois de usar**: `cd infra && terraform destroy` remove todos os recursos —
   evita gastar o budget do lab à toa depois da correção.
+
+---
+
+## Critérios de Avaliação
+
+Mapeamento direto do critério do enunciado pra onde a evidência está no projeto:
+
+| Critério | Peso | Onde está a evidência |
+|---|---|---|
+| Clean code e estrutura | 15% | `src/` modular por responsabilidade, type hints, [Design Patterns](#design-patterns), `make lint` sem erros |
+| Reprodutibilidade | 15% | `poetry.lock` commitado, `.env.example`, [Início Rápido](#início-rápido) — instalação limpa documentada |
+| Docker | 15% | `Dockerfile` multi-stage (5 estágios: builder, runtime, lint, ci, serve), `docker-compose.yml` |
+| DVC + Pipeline | 15% | `dvc.yaml` com 5 stages, `dvc repro` funcional — ver [Arquitetura](#arquitetura) |
+| Rede neural (PyTorch) | 15% | NeuMF (GMF+MLP), early stopping — ver [Resultados](#resultados) e Model Card |
+| MLflow + Registry | 10% | Tracking de todos os runs + Model Registry com aliases `@staging`/`@production` |
+| Vídeo STAR | 10% | Link no vídeo de entrega (fora do repositório) |
+| Bônus: deploy em nuvem | 5% | [Deploy na AWS](#deploy-na-aws-bônus) — URL pública real, testada |
 
 ---
 
