@@ -109,50 +109,36 @@ O NCF fica marginalmente abaixo do Popularity (dataset pequeno e denso favorece 
 
 **Pré-requisitos:** Python 3.11+, [Poetry](https://python-poetry.org/), Docker + Docker Compose, git.
 
-Caminho recomendado — do zero até o modelo registrado:
-
 ```bash
 git clone https://github.com/lucasbergamo/recomendador_neural_ecommerce.git
 cd recomendador_neural_ecommerce
-
-poetry install
-cp .env.example .env
-
-make docker-up      # sobe o MLflow em container (localhost:5000)
-dvc repro           # pipeline completo: preprocess → feature_eng →
-                     # {train_baselines, train} → evaluate
-
-make test           # 29 testes, roda local (rápido, não precisa de container) —
-                     # rodar DEPOIS do dvc repro: os testes de API carregam
-                     # data/gold/metadata.parquet e models/ncf.pt de verdade
-make register       # registra o modelo final no MLflow Model Registry
 ```
 
-Depois disso, em `http://localhost:5000`:
-- aba **Runs** (ou **Evaluation runs**, dependendo da versão da UI) do experimento `recommendation-system` — todos os runs de treino/baseline
-- **Models → ncf-recommender** — o modelo registrado, aliases `@staging` e `@production`
+O projeto tem **dois caminhos completos e independentes** — não é "principal e alternativa
+escondida", são **dois critérios de avaliação separados** do enunciado (**Docker: 15%** e
+**Reprodutibilidade: 15%**), cada um testado de ponta a ponta numa máquina nunca usada
+antes. Escolha um dos dois, ou rode os dois.
 
-> [!NOTE]
-> **Remote do DVC**: é local (`~/dvc-storage`, simula um bucket S3) — quem clona o repo não tem acesso a essa pasta, então `dvc pull` **não vai funcionar**. Isso é intencional: `dvc repro` reconstrói tudo do zero a partir dos CSVs brutos do MovieLens já commitados em `data/bronze/`, sem depender de nenhum remote externo.
->
-> **Por que não S3 de verdade**: o padrão de mercado em produção é DVC remote em S3 (ou GCS/Azure Blob) **privado**, com acesso via IAM role da equipe/CI — não público. Não usamos aqui porque a conta AWS deste projeto é uma sandbox temporária de Learner Lab (sem colaborador de equipe pra conceder role IAM, sem garantia de vida útil após o curso) — nesse contexto, tornar o bucket público seria a única forma de um avaliador externo acessar, o que foge do padrão profissional e ainda dependeria da conta sandbox continuar existindo. O design atual (CSV bruto commitado + `dvc repro` recalculando) é deliberadamente auto-contido: funciona pra qualquer avaliador, em qualquer lugar, sem depender de credencial ou conta nenhuma.
+### 🐳 Caminho 1 — Docker (o mais testado)
 
-<details>
-<summary>Alternativas — sem Docker, ou passo a passo manual</summary>
+<details open>
+<summary><strong>Passo a passo completo</strong></summary>
 
-**Docker, passo a passo** (equivalente ao `dvc repro`, mas manual — tudo containerizado, sem depender de Poetry local):
+Tudo containerizado — não precisa de Poetry nem Python instalado localmente, só Docker.
+Cada `make docker-X` builda a imagem (se ainda não existir) e roda o comando dentro do
+container, lendo/gravando dado real via volume montado com o host — exceto `docker-serve`,
+que empacota o modelo **dentro** da própria imagem (ver aviso abaixo).
 
 ```bash
-make docker-up
-make docker-lint
-make docker-data
-make docker-train-baselines
-make docker-train
-make docker-eval
-make docker-test    # roda depois dos dados existirem — os testes de API carregam
-                     # data/gold/metadata.parquet de verdade, não com dado sintético
-make docker-register
-make docker-serve   # sobe a API HTTP servindo o modelo — ver seção "API de Recomendação"
+make docker-up               # sobe o MLflow em container (localhost:5000)
+make docker-lint              # ruff check + format --check, dentro do container
+make docker-data              # bronze → silver → gold (download + preprocess + features)
+make docker-train-baselines   # SVD, Popularity, Random — registrados no MLflow
+make docker-train             # NCF (NeuMF) — early stopping, registrado no MLflow
+make docker-eval              # avalia o NCF salvo no test set
+make docker-test              # 29 testes — rodar DEPOIS dos passos acima (ver aviso)
+make docker-register          # registra o modelo final no MLflow Model Registry
+make docker-serve             # sobe a API HTTP servindo o modelo (localhost:8000)
 ```
 
 > [!WARNING]
@@ -178,21 +164,78 @@ make docker-serve   # sobe a API HTTP servindo o modelo — ver seção "API de 
 > exatamente a evidência que está sendo avaliada. Por isso o caminho documentado é sempre
 > build local, nunca pull de um registro.
 
-**Sem Docker** (MLflow local via Poetry, precisa estar rodando antes dos comandos de treino):
+Depois de `make docker-register`, em `http://localhost:5000`:
+- aba **Runs** (ou **Evaluation runs**, dependendo da versão da UI) do experimento `recommendation-system` — todos os runs de treino/baseline
+- **Models → ncf-recommender** — o modelo registrado, aliases `@staging` e `@production`
+
+</details>
+
+### 🐍 Caminho 2 — Poetry, sem Docker
+
+<details open>
+<summary><strong>Passo a passo completo</strong></summary>
+
+Roda direto no seu Python — mais rápido pra iterar (edita e roda na hora, sem rebuildar
+imagem), mas depende do ambiente da sua máquina em vez de isolado num container. É o
+caminho que o critério "Reprodutibilidade" avalia especificamente: instalação limpa via
+Poetry, lock file, `.env`.
 
 ```bash
-poetry install && cp .env.example .env
+poetry install
+cp .env.example .env
+```
+
+> [!IMPORTANT]
+> **Instalando o Poetry**: use o instalador oficial, **não** o pacote do gerenciador do
+> sistema (`apt install python3-poetry` no Ubuntu/Debian instala uma versão antiga demais,
+> incompatível com o `poetry.lock` deste repo — gerado pelo Poetry 2.x):
+> ```bash
+> curl -sSL https://install.python-poetry.org | python3 -
+> ```
+> Se `poetry --version` não for reconhecido depois, adicione `~/.local/bin` ao `PATH`.
+
+Com o ambiente instalado, dois jeitos de rodar o pipeline de dados/treino:
+
+**Opção A — `dvc repro`** (recomendado — reaproveita cache por hash, só refaz o que mudou):
+```bash
 make lint
 make mlflow &        # ou outro terminal — acesse http://localhost:5000
+
+dvc repro            # pipeline completo: preprocess → feature_eng →
+                      # {train_baselines, train} → evaluate
+
+make test             # 29 testes — DEPOIS do dvc repro (mesmo motivo do Caminho 1)
+make register
+```
+
+**Opção B — stages manuais, um a um** (mesmo resultado do `dvc repro`, sem a lógica de cache):
+```bash
+make lint
+make mlflow &
 
 make data
 make train-baselines
 make train
 make eval
-make test            # DEPOIS de data/train — os testes de API precisam de
-                      # data/gold/metadata.parquet e models/ncf.pt reais
+make test
 make register
 ```
+
+> [!NOTE]
+> **Remote do DVC**: é local (`~/dvc-storage`, simula um bucket S3) — quem clona o repo
+> não tem acesso a essa pasta, então `dvc pull` **não vai funcionar**. Isso é intencional:
+> `dvc repro` reconstrói tudo do zero a partir dos CSVs brutos do MovieLens já commitados
+> em `data/bronze/`, sem depender de nenhum remote externo.
+>
+> **Por que não S3 de verdade**: o padrão de mercado em produção é DVC remote em S3 (ou
+> GCS/Azure Blob) **privado**, com acesso via IAM role da equipe/CI — não público. Não
+> usamos aqui porque a conta AWS deste projeto é uma sandbox temporária de Learner Lab
+> (sem colaborador de equipe pra conceder role IAM, sem garantia de vida útil após o
+> curso) — nesse contexto, tornar o bucket público seria a única forma de um avaliador
+> externo acessar, o que foge do padrão profissional e ainda dependeria da conta sandbox
+> continuar existindo. O design atual (CSV bruto commitado + `dvc repro` recalculando) é
+> deliberadamente auto-contido: funciona pra qualquer avaliador, em qualquer lugar, sem
+> depender de credencial ou conta nenhuma.
 
 </details>
 
