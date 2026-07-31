@@ -61,8 +61,8 @@ docker-build: check-resources
 	docker compose build
 
 docker-lint:
-	docker compose --profile ci run --rm ci ruff check src/ tests/
-	docker compose --profile ci run --rm ci ruff format --check src/ tests/
+	docker compose --profile ci run --rm lint ruff check src/ tests/
+	docker compose --profile ci run --rm lint ruff format --check src/ tests/
 
 docker-test:
 	docker compose --profile ci run --rm ci pytest tests/ -v --tb=short
