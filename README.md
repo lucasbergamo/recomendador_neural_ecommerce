@@ -5,6 +5,7 @@
 ![MLflow](https://img.shields.io/badge/MLflow-2.15+-0194E2?style=flat-square&logo=mlflow&logoColor=white)
 ![DVC](https://img.shields.io/badge/DVC-3.67+-945DD6?style=flat-square&logo=dvc&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-multi--stage-2496ED?style=flat-square&logo=docker&logoColor=white)
+![Poetry](https://img.shields.io/badge/Poetry-2.x-60A5FA?style=flat-square&logo=poetry&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?style=flat-square&logo=fastapi&logoColor=white)
 ![Terraform](https://img.shields.io/badge/Terraform-AWS-7B42BC?style=flat-square&logo=terraform&logoColor=white)
 ![Ruff](https://img.shields.io/badge/linting-ruff-FCC21B?style=flat-square)
@@ -225,14 +226,8 @@ imagem), mas depende do ambiente da sua máquina em vez de isolado num container
 caminho que o critério "Reprodutibilidade" avalia especificamente: instalação limpa via
 Poetry, lock file, `.env`.
 
-```bash
-make install
-cp .env.example .env
-make validate         # sanity check: Python, pacotes-chave, diretórios, .env
-```
-
 > [!IMPORTANT]
-> **Instalando o Poetry**: duas formas, escolha uma.
+> **Instalando o Poetry** (pré-requisito do `make install` abaixo): duas formas, escolha uma.
 >
 > **Opção 1 — instalador oficial (recomendado)**: instala a mesma versão major (2.x) usada
 > pra gerar o `poetry.lock` deste repo (Poetry 2.4.1) — sem avisos, compatibilidade garantida.
@@ -252,6 +247,12 @@ make validate         # sanity check: Python, pacotes-chave, diretórios, .env
 > de possível incompatibilidade do lock file — testamos e, na prática, instalou tudo
 > corretamente mesmo assim. Funciona, mas sem a garantia formal que a Opção 1 tem.
 
+```bash
+make install
+cp .env.example .env
+make validate         # sanity check: Python, pacotes-chave, diretórios, .env
+```
+
 Com o ambiente instalado, dois jeitos de rodar o pipeline de dados/treino:
 
 **Opção A — `make pipeline`** (recomendado — usa `dvc repro`, reaproveita cache por hash,
@@ -263,7 +264,8 @@ make mlflow &        # ou outro terminal — acesse http://localhost:5000
 make pipeline         # dvc repro: preprocess → feature_eng →
                       # {train_baselines, train} → evaluate
 
-make test             # 29 testes + cobertura — DEPOIS do pipeline (mesmo motivo do Caminho 1)
+make test             # 29 testes + cobertura — DEPOIS do pipeline (test_api.py precisa do
+                      # modelo e dados já gerados, senão 3 dos 29 testes falham)
 make register
 make serve &          # sobe a API HTTP servindo o modelo (localhost:8000)
 ```
