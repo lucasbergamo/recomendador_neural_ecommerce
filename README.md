@@ -7,7 +7,8 @@
 ![Docker](https://img.shields.io/badge/Docker-multi--stage-2496ED?style=flat-square&logo=docker&logoColor=white)
 ![Poetry](https://img.shields.io/badge/Poetry-2.x-60A5FA?style=flat-square&logo=poetry&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?style=flat-square&logo=fastapi&logoColor=white)
-![Terraform](https://img.shields.io/badge/Terraform-AWS-7B42BC?style=flat-square&logo=terraform&logoColor=white)
+![Terraform](https://img.shields.io/badge/Terraform-IaC-7B42BC?style=flat-square&logo=terraform&logoColor=white)
+![AWS](https://img.shields.io/badge/AWS-Fargate%20%7C%20API%20Gateway-FF9900?style=flat-square&logo=amazonaws&logoColor=white)
 ![Ruff](https://img.shields.io/badge/linting-ruff-FCC21B?style=flat-square)
 ![Testes](https://img.shields.io/badge/testes-29%20passando-brightgreen?style=flat-square)
 
