@@ -188,22 +188,19 @@ make docker-register          # registra o modelo final no MLflow Model Registry
 make docker-serve             # sobe a API HTTP servindo o modelo (localhost:8000)
 ```
 
-> [!WARNING]
-> **Ordem importa**: `docker-test` inclui os testes de `test_api.py`, que sobem a API de
+> **Aviso — Ordem importa**: `docker-test` inclui os testes de `test_api.py`, que sobem a API de
 > verdade e carregam `data/gold/metadata.parquet` — rodar antes de `docker-data`/`docker-train`
 > derruba esses 3 testes com `FileNotFoundError` (os outros 26 não dependem disso e passam
 > normalmente). `docker-serve` empacota `models/ncf.pt` e `data/gold/metadata.parquet`
 > **dentro** da imagem (não via volume, como os outros serviços) — também precisa rodar
 > `docker-train` antes, senão o build falha por falta desses arquivos.
 
-> [!WARNING]
-> **Recursos mínimos pra buildar**: as imagens incluem PyTorch, então o build é pesado.
+> **Aviso — Recursos mínimos pra buildar**: as imagens incluem PyTorch, então o build é pesado.
 > Rode `make check-resources` antes (ou deixe `make docker-build` rodar automaticamente)
 > — recomendado 6GB+ de RAM disponíveis pro Docker e 10GB+ de disco livre. Com menos
 > que isso, o build pode travar a máquina em vez de só ficar lento.
 
-> [!NOTE]
-> **Por que não publicar a imagem pronta num registro (ECR)**: o padrão de mercado em
+> **Nota — Por que não publicar a imagem pronta num registro (ECR)**: o padrão de mercado em
 > produção é registro privado (ECR/Docker Hub) com permissão de pull via IAM role pra
 > equipe/CI — não público. Além da mesma limitação da conta sandbox (Learner Lab temporária,
 > sem colaborador pra IAM), o critério de avaliação "Docker" espera justamente ver o
@@ -227,8 +224,7 @@ imagem), mas depende do ambiente da sua máquina em vez de isolado num container
 caminho que o critério "Reprodutibilidade" avalia especificamente: instalação limpa via
 Poetry, lock file, `.env`.
 
-> [!IMPORTANT]
-> **Instalando o Poetry** (pré-requisito do `make install` abaixo): duas formas, escolha uma.
+> **Importante — Instalando o Poetry** (pré-requisito do `make install` abaixo): duas formas, escolha uma.
 >
 > **Opção 1 — instalador oficial (recomendado)**: instala a mesma versão major (2.x) usada
 > pra gerar o `poetry.lock` deste repo (Poetry 2.4.1) — sem avisos, compatibilidade garantida.
@@ -285,8 +281,7 @@ make register
 make serve &
 ```
 
-> [!NOTE]
-> **Remote do DVC**: é local (`~/dvc-storage`, simula um bucket S3) — quem clona o repo
+> **Nota — Remote do DVC**: é local (`~/dvc-storage`, simula um bucket S3) — quem clona o repo
 > não tem acesso a essa pasta, então `dvc pull` **não vai funcionar**. Isso é intencional:
 > `dvc repro` reconstrói tudo do zero a partir dos CSVs brutos do MovieLens já commitados
 > em `data/bronze/`, sem depender de nenhum remote externo.
