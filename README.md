@@ -232,15 +232,25 @@ make validate         # sanity check: Python, pacotes-chave, diretórios, .env
 ```
 
 > [!IMPORTANT]
-> **Instalando o Poetry**: recomendado o instalador oficial — o pacote do gerenciador do
-> sistema (`apt install python3-poetry` no Ubuntu/Debian) costuma trazer uma versão mais
-> antiga que a usada pra gerar o `poetry.lock` deste repo (Poetry 2.4.1). Testamos com
-> Poetry 1.8.2 via apt: ele avisa que o lock file pode não ser compatível, mas na prática
-> instalou tudo corretamente. Ainda assim, o caminho garantido é o oficial:
+> **Instalando o Poetry**: duas formas, escolha uma.
+>
+> **Opção 1 — instalador oficial (recomendado)**: instala a mesma versão major (2.x) usada
+> pra gerar o `poetry.lock` deste repo (Poetry 2.4.1) — sem avisos, compatibilidade garantida.
 > ```bash
 > curl -sSL https://install.python-poetry.org | python3 -
 > ```
-> Se `poetry --version` não for reconhecido depois, adicione `~/.local/bin` ao `PATH`.
+> Se `poetry --version` não for reconhecido depois, o instalador colocou o binário em
+> `~/.local/bin`, que pode não estar no seu `PATH` ainda:
+> ```bash
+> echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+> source ~/.bashrc
+> ```
+>
+> **Opção 2 — pacote do gerenciador do sistema** (`apt install python3-poetry` no
+> Ubuntu/Debian): mais simples se você já usa Poetry pra outros projetos, mas costuma trazer
+> uma versão mais antiga (testamos com 1.8.2). Nesse caso o `poetry install` emite um aviso
+> de possível incompatibilidade do lock file — testamos e, na prática, instalou tudo
+> corretamente mesmo assim. Funciona, mas sem a garantia formal que a Opção 1 tem.
 
 Com o ambiente instalado, dois jeitos de rodar o pipeline de dados/treino:
 
