@@ -89,7 +89,9 @@ make docker-up      # sobe o MLflow em container (localhost:5000)
 dvc repro           # pipeline completo: preprocess → feature_eng →
                      # {train_baselines, train} → evaluate
 
-make test           # 26 testes, roda local (rápido, não precisa de container)
+make test           # 29 testes, roda local (rápido, não precisa de container) —
+                     # rodar DEPOIS do dvc repro: os testes de API carregam
+                     # data/gold/metadata.parquet e models/ncf.pt de verdade
 make register       # registra o modelo final no MLflow Model Registry
 ```
 
@@ -106,12 +108,15 @@ Depois disso, em `http://localhost:5000`:
 
 ```bash
 poetry install && cp .env.example .env
+make lint
 make mlflow &        # ou outro terminal — acesse http://localhost:5000
 
 make data
 make train-baselines
 make train
 make eval
+make test            # DEPOIS de data/train — os testes de API precisam de
+                      # data/gold/metadata.parquet e models/ncf.pt reais
 make register
 ```
 
