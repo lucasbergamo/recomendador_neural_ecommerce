@@ -1,4 +1,4 @@
-.PHONY: install lint format test validate data train-baselines train eval register docker-up docker-down docker-lint docker-test docker-eval docker-register docker-serve clean
+.PHONY: install lint format test validate data train-baselines train eval register serve pipeline mlflow docker-up docker-down docker-lint docker-test docker-eval docker-register docker-serve clean
 
 export CURRENT_UID := $(shell id -u)
 export CURRENT_GID := $(shell id -g)
@@ -41,6 +41,10 @@ eval:
 # ── Model Registry ────────────────────────────────────────────────
 register:
 	poetry run python -m scripts.register_model
+
+# ── Serving ───────────────────────────────────────────────────────
+serve:
+	poetry run uvicorn src.api.main:app --host 0.0.0.0 --port 8000
 
 # Pipeline completo via DVC
 pipeline:

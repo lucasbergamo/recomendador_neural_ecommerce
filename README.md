@@ -226,14 +226,17 @@ caminho que o critério "Reprodutibilidade" avalia especificamente: instalação
 Poetry, lock file, `.env`.
 
 ```bash
-poetry install
+make install
 cp .env.example .env
+make validate         # sanity check: Python, pacotes-chave, diretórios, .env
 ```
 
 > [!IMPORTANT]
-> **Instalando o Poetry**: use o instalador oficial, **não** o pacote do gerenciador do
-> sistema (`apt install python3-poetry` no Ubuntu/Debian instala uma versão antiga demais,
-> incompatível com o `poetry.lock` deste repo — gerado pelo Poetry 2.x):
+> **Instalando o Poetry**: recomendado o instalador oficial — o pacote do gerenciador do
+> sistema (`apt install python3-poetry` no Ubuntu/Debian) costuma trazer uma versão mais
+> antiga que a usada pra gerar o `poetry.lock` deste repo (Poetry 2.4.1). Testamos com
+> Poetry 1.8.2 via apt: ele avisa que o lock file pode não ser compatível, mas na prática
+> instalou tudo corretamente. Ainda assim, o caminho garantido é o oficial:
 > ```bash
 > curl -sSL https://install.python-poetry.org | python3 -
 > ```
@@ -241,19 +244,21 @@ cp .env.example .env
 
 Com o ambiente instalado, dois jeitos de rodar o pipeline de dados/treino:
 
-**Opção A — `dvc repro`** (recomendado — reaproveita cache por hash, só refaz o que mudou):
+**Opção A — `make pipeline`** (recomendado — usa `dvc repro`, reaproveita cache por hash,
+só refaz o que mudou):
 ```bash
 make lint
 make mlflow &        # ou outro terminal — acesse http://localhost:5000
 
-poetry run dvc repro  # pipeline completo: preprocess → feature_eng →
+make pipeline         # dvc repro: preprocess → feature_eng →
                       # {train_baselines, train} → evaluate
 
-make test             # 29 testes — DEPOIS do dvc repro (mesmo motivo do Caminho 1)
+make test             # 29 testes + cobertura — DEPOIS do pipeline (mesmo motivo do Caminho 1)
 make register
+make serve &          # sobe a API HTTP servindo o modelo (localhost:8000)
 ```
 
-**Opção B — stages manuais, um a um** (mesmo resultado do `dvc repro`, sem a lógica de cache):
+**Opção B — stages manuais, um a um** (mesmo resultado do `make pipeline`, sem a lógica de cache):
 ```bash
 make lint
 make mlflow &
@@ -264,6 +269,7 @@ make train
 make eval
 make test
 make register
+make serve &
 ```
 
 > [!NOTE]
@@ -292,10 +298,18 @@ Endpoint HTTP mínimo (FastAPI) que carrega `models/ncf.pt` uma vez na inicializ
 expõe `recommend_top_k` — a mesma inferência usada em `evaluate`/`register`, agora
 acessível por fora do processo Python.
 
-**Local:**
+**Local (Docker):**
 
 ```bash
 make docker-serve
+curl http://localhost:8000/health
+curl "http://localhost:8000/recommend/5?k=10"
+```
+
+**Local (Poetry, sem Docker):**
+
+```bash
+make serve &
 curl http://localhost:8000/health
 curl "http://localhost:8000/recommend/5?k=10"
 ```
