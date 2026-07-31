@@ -356,8 +356,7 @@ Documentação completa em [`docs/dataset.md`](docs/dataset.md).
 ## Testes
 
 ```bash
-make test        # todos os testes
-make test-cov    # com relatório de cobertura
+make test        # todos os testes, com relatório de cobertura (--cov=src)
 ```
 
 Os testes cobrem:

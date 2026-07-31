@@ -21,9 +21,6 @@ format:
 
 # ── Testes ────────────────────────────────────────────────────────
 test:
-	poetry run pytest tests/ -v --tb=short
-
-test-cov:
 	poetry run pytest tests/ -v --tb=short --cov=src --cov-report=term-missing
 
 # ── Pipeline de dados ─────────────────────────────────────────────
@@ -65,7 +62,7 @@ docker-lint:
 	docker compose --profile ci run --rm lint ruff format --check src/ tests/
 
 docker-test:
-	docker compose --profile ci run --rm ci pytest tests/ -v --tb=short
+	docker compose --profile ci run --rm ci pytest tests/ -v --tb=short --cov=src --cov-report=term-missing
 
 docker-up:
 	docker compose up -d mlflow
