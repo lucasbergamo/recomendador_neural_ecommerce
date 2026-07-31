@@ -134,25 +134,11 @@ Depois disso, em `http://localhost:5000`:
 
 > [!NOTE]
 > **Remote do DVC**: é local (`~/dvc-storage`, simula um bucket S3) — quem clona o repo não tem acesso a essa pasta, então `dvc pull` **não vai funcionar**. Isso é intencional: `dvc repro` reconstrói tudo do zero a partir dos CSVs brutos do MovieLens já commitados em `data/bronze/`, sem depender de nenhum remote externo.
+>
+> **Por que não S3 de verdade**: o padrão de mercado em produção é DVC remote em S3 (ou GCS/Azure Blob) **privado**, com acesso via IAM role da equipe/CI — não público. Não usamos aqui porque a conta AWS deste projeto é uma sandbox temporária de Learner Lab (sem colaborador de equipe pra conceder role IAM, sem garantia de vida útil após o curso) — nesse contexto, tornar o bucket público seria a única forma de um avaliador externo acessar, o que foge do padrão profissional e ainda dependeria da conta sandbox continuar existindo. O design atual (CSV bruto commitado + `dvc repro` recalculando) é deliberadamente auto-contido: funciona pra qualquer avaliador, em qualquer lugar, sem depender de credencial ou conta nenhuma.
 
 <details>
 <summary>Alternativas — sem Docker, ou passo a passo manual</summary>
-
-**Sem Docker** (MLflow local via Poetry, precisa estar rodando antes dos comandos de treino):
-
-```bash
-poetry install && cp .env.example .env
-make lint
-make mlflow &        # ou outro terminal — acesse http://localhost:5000
-
-make data
-make train-baselines
-make train
-make eval
-make test            # DEPOIS de data/train — os testes de API precisam de
-                      # data/gold/metadata.parquet e models/ncf.pt reais
-make register
-```
 
 **Docker, passo a passo** (equivalente ao `dvc repro`, mas manual — tudo containerizado, sem depender de Poetry local):
 
@@ -182,6 +168,31 @@ make docker-serve   # sobe a API HTTP servindo o modelo — ver seção "API de 
 > Rode `make check-resources` antes (ou deixe `make docker-build` rodar automaticamente)
 > — recomendado 6GB+ de RAM disponíveis pro Docker e 10GB+ de disco livre. Com menos
 > que isso, o build pode travar a máquina em vez de só ficar lento.
+
+> [!NOTE]
+> **Por que não publicar a imagem pronta num registro (ECR)**: o padrão de mercado em
+> produção é registro privado (ECR/Docker Hub) com permissão de pull via IAM role pra
+> equipe/CI — não público. Além da mesma limitação da conta sandbox (Learner Lab temporária,
+> sem colaborador pra IAM), o critério de avaliação "Docker" espera justamente ver o
+> **build a partir do Dockerfile** funcionando — publicar imagem pronta pra pull tiraria
+> exatamente a evidência que está sendo avaliada. Por isso o caminho documentado é sempre
+> build local, nunca pull de um registro.
+
+**Sem Docker** (MLflow local via Poetry, precisa estar rodando antes dos comandos de treino):
+
+```bash
+poetry install && cp .env.example .env
+make lint
+make mlflow &        # ou outro terminal — acesse http://localhost:5000
+
+make data
+make train-baselines
+make train
+make eval
+make test            # DEPOIS de data/train — os testes de API precisam de
+                      # data/gold/metadata.parquet e models/ncf.pt reais
+make register
+```
 
 </details>
 
