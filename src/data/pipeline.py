@@ -7,7 +7,15 @@ from src.data.features import (
     temporal_split,
 )
 from src.data.load import download_movielens, load_bronze
-from src.data.preprocess import preprocess_items, preprocess_ratings, preprocess_users, save_silver
+from src.data.preprocess import (
+    _build_id_maps,
+    _filter_cold_start,
+    preprocess_items,
+    preprocess_ratings,
+    preprocess_users,
+    save_item_id_map,
+    save_silver,
+)
 from src.utils.logger import get_logger
 from src.utils.reproducibility import set_global_seed
 
@@ -25,6 +33,11 @@ def run() -> None:
     items = preprocess_items(items_raw)
     users = preprocess_users(users_raw)
     save_silver(ratings, items, users)
+
+    clean = ratings_raw.dropna(subset=["user_id", "item_id", "rating"])
+    filtered = _filter_cold_start(clean)
+    _, item_map = _build_id_maps(filtered)
+    save_item_id_map(item_map)
 
     n_users = ratings["user_id"].nunique()
     n_items = ratings["item_id"].nunique()
