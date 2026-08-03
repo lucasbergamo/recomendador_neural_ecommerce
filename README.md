@@ -49,6 +49,21 @@ Item    → Embedding ─┘
 
 O modelo combina **Generalized Matrix Factorization (GMF)** — que captura interações lineares — com um **MLP** que captura não-linearidades, resultando na arquitetura **NeuMF** (He et al., 2017).
 
+O problema resolvido é **ranking**, não classificação: não se trata de prever se um usuário vai
+interagir ou não com um item isoladamente, e sim de ordenar todos os itens por relevância e
+mostrar os top-K. Usamos o MovieLens 100K como **proxy** do cenário de e-commerce do enunciado —
+IDs de usuário, IDs de item e um sinal de interação são exatamente a mesma estrutura de dados,
+sem depender de um dataset proprietário de e-commerce real.
+
+### Decisões de modelagem
+
+| Decisão | Por quê |
+|---|---|
+| Feedback implícito, não ratings explícitos | Ratings são escassos e subjetivos; interação (clique/compra) é sinal mais confiável e abundante — He et al. (2017) trata recomendação como ranking com feedback implícito |
+| Embeddings **não compartilhados** entre GMF e MLP | Cada caminho mantém sua própria tabela. O paper original já mostra que compartilhar degrada o resultado, e confirmamos aqui: cada caminho precisa otimizar uma representação diferente pro seu papel (linear vs. não-linear) |
+| Split **temporal** (leave-time-out), não aleatório | Split aleatório vaza informação do futuro pro treino — o modelo veria interações recentes antes das antigas. O split temporal (últimas 10% interações de cada usuário → test, 10% anteriores → val) simula o cenário real de produção, onde só existe o passado |
+| Negative sampling 1:4, **só no treino** | Proporção padrão da literatura — suficiente pra ensinar o modelo a distinguir relevante de irrelevante sem distorcer demais a distribuição. Validação e teste usam só interações reais, senão a métrica fica artificial |
+
 ### Pipeline de ponta a ponta
 
 ```mermaid
@@ -214,7 +229,7 @@ Depois de `make docker-register`, em `http://localhost:5000`:
 
 </details>
 
-### 🐍 Caminho 2 — Poetry, sem Docker
+### 🐍 Caminho 2 — Poetry
 
 <details open>
 <summary><strong>Passo a passo completo</strong></summary>
@@ -314,7 +329,7 @@ curl http://localhost:8000/health
 curl "http://localhost:8000/recommend/5?k=10"
 ```
 
-**Local (Poetry, sem Docker):**
+**Local (Poetry):**
 
 ```bash
 make serve &
@@ -421,7 +436,7 @@ Internet → API Gateway (REST API, HTTPS gerenciado)
 - **Desligar depois de usar**: `cd infra && terraform destroy` remove todos os recursos —
   evita gastar o budget do lab à toa depois da correção.
 
-### Decisões de arquitetura (por quê, não só o quê)
+### Decisões de arquitetura
 
 | Decisão | Por quê |
 |---|---|
